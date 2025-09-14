@@ -68,17 +68,37 @@
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
 
+                // Fetch common data, but don't block rendering for posts
                 await Promise.all([
                     App.fetchNavIfNeeded(),
-                    App.fetchDataIfNeeded(),
                     App.fetchTagsIfNeeded()
                 ]);
+
+                // Always fetch posts for main pages to get latest view counts
+                if (path === '/' || parts[1] === 'category' || parts[1] === 'tag') {
+                   await App.fetchDataIfNeeded(true); // Force refresh
+                } else {
+                   await App.fetchDataIfNeeded(); // Use cache if available
+                }
+
 
                 if (path === '/') {
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(App.state.posts));
                 } else if (parts[1] === 'post' && parts[2]) {
                     const slug = parts[2];
-                    const post = App.state.posts.find(p => p.slug === slug);
+                    const post = await App.fetchSinglePost(slug); // Fetch single post to increment views
+                    
+                    // Update the post in the main state array
+                    if (post) {
+                        const postIndex = App.state.posts.findIndex(p => p.slug === slug);
+                        if (postIndex > -1) {
+                            App.state.posts[postIndex] = post;
+                        } else {
+                            // If post wasn't in the list, add it (edge case)
+                            App.state.posts.unshift(post);
+                        }
+                    }
+
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.postPage(post));
                 } else if (parts[1] === 'category' && parts[2]) {
                     const categoryName = decodeURIComponent(parts[2]);
@@ -101,7 +121,24 @@
             },
             
             fetchNavIfNeeded: async () => { /* ... no changes ... */ },
-            fetchDataIfNeeded: async () => { /* ... no changes ... */ },
+            fetchDataIfNeeded: async (forceRefresh = false) => {
+                if (App.state.posts.length === 0 || forceRefresh) {
+                     try {
+                        const response = await fetch(`${App.config.workerUrl}/api/posts`);
+                        if (!response.ok) throw new Error('Failed to fetch posts');
+                        const posts = await response.json();
+                        App.state.posts = posts;
+                        const categories = {};
+                        posts.forEach(post => {
+                            categories[post.category] = (categories[post.category] || 0) + 1;
+                        });
+                        App.state.categories = categories;
+                        App.state.recentPosts = posts.slice(0, 5);
+                    } catch (error) {
+                        console.error("Fetch posts error:", error);
+                    }
+                }
+            },
             fetchTagsIfNeeded: async () => {
                  if (App.state.tags.length === 0) {
                      try {
@@ -111,6 +148,17 @@
                     } catch (error) {
                         console.error("Fetch tags error:", error);
                     }
+                }
+            },
+            
+            fetchSinglePost: async (slug) => {
+                try {
+                    const response = await fetch(`${App.config.workerUrl}/api/posts/${slug}`);
+                    if (!response.ok) throw new Error('Post not found');
+                    return await response.json();
+                } catch (error) {
+                    console.error("Fetch single post error:", error);
+                    return null;
                 }
             },
 
@@ -136,6 +184,7 @@
                     imageUrl: form.imageUrl.value,
                     content: App.state.editorInstance.root.innerHTML,
                     tags: tags,
+                    views: form.views.value, // Capture views from form
                     date: isEditing ? form.dataset.date : null
                 };
 
@@ -152,7 +201,7 @@
                         window.location.hash = '/admin/dashboard';
                     } else { throw new Error('保存失败'); }
                 } catch (error) {
-                    console.error('Error saving post:', error);
+                        console.error('Error saving post:', error);
                     alert('文章保存失败。');
                 }
             },
@@ -200,27 +249,54 @@
                     </div>
                 `,
                 postCard: (post) => `
-                    <article class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="relative">
+                    <article class="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col sm:flex-row overflow-hidden items-center">
+                         <div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0">
                             <a href="#/post/${post.slug}" class="block">
-                                <img src="${post.imageUrl || 'https://placehold.co/800x400/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/800x400/e2e8f0/cbd5e0?text=Image';">
+                                <img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-48 sm:h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';">
                             </a>
-                            <a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-4 left-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-600">${post.category}</a>
+                            <a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a>
                         </div>
-                        <div class="p-6">
-                            <h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a></h2>
-                            <div class="text-gray-600 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 120)}</div>
-                            <div class="flex justify-between items-center text-xs text-gray-500">
+                        <div class="p-5 flex-grow flex flex-col justify-between self-stretch">
+                            <div>
+                                <h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a></h2>
+                                <div class="text-gray-600 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-gray-500 mt-2">
                                 <span>${new Date(post.date).toLocaleDateString()}</span>
                                 <div class="flex items-center gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    <span>${Math.floor(Math.random() * 100)}</span>
+                                    <span>${post.views || 0}</span>
                                 </div>
                             </div>
                         </div>
                     </article>
                 `,
-                postPage: (post) => `...`,
+                postPage: (post) => {
+                    if (!post) return App.templates.notFoundPage();
+                    return `
+                        <article class="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200">
+                             <div class="flex items-center text-sm text-gray-500 mb-4">
+                                <a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a>
+                                <span class="mx-2">&middot;</span>
+                                <span>发布于 ${new Date(post.date).toLocaleDateString()}</span>
+                                <span class="mx-2">&middot;</span>
+                                <div class="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    <span>${post.views || 0}</span>
+                                </div>
+                            </div>
+                            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">${post.title}</h1>
+                            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}
+                            <div class="content-area text-gray-700">
+                                ${post.content}
+                            </div>
+                             <div class="mt-8 pt-4 border-t flex flex-wrap gap-2">
+                                ${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }
+                                ${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200">${tag}</a>`).join('')}
+                            </div>
+                        </article>
+                    `;
+                },
                 loginPage: () => `...`,
                 adminDashboard: () => `...`,
                 postManager: () => `...`,
@@ -232,9 +308,15 @@
                             <div><label for="category" class="block text-sm font-medium text-gray-700">分类</label><input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
                             <div><label for="imageUrl" class="block text-sm font-medium text-gray-700">配图 URL</label><input type="url" id="imageUrl" name="imageUrl" value="${post.imageUrl || ''}" placeholder="https://example.com/image.jpg" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
                         </div>
-                        <div>
-                           <label for="tags" class="block text-sm font-medium text-gray-700">标签 (用英文逗号,隔开)</label>
-                           <input type="text" id="tags" name="tags" value="${(post.tags || []).join(', ')}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div>
+                               <label for="tags" class="block text-sm font-medium text-gray-700">标签 (用英文逗号,隔开)</label>
+                               <input type="text" id="tags" name="tags" value="${(post.tags || []).join(', ')}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                           </div>
+                           <div>
+                               <label for="views" class="block text-sm font-medium text-gray-700">浏览量</label>
+                               <input type="number" id="views" name="views" value="${post.views || 0}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                           </div>
                         </div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">内容</label><div id="editor" class="bg-white"></div></div>
                         <div class="text-right"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">保存文章</button></div>
