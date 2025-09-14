@@ -5,20 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 Quill 富文本编辑器 -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        /* 文章内容区域样式 */
+        .ql-editor { min-height: 250px; font-size: 16px; line-height: 1.7; }
+        .content-area { font-size: 16px; line-height: 1.7; }
         .content-area a { color: #3b82f6; text-decoration: underline; }
-        .content-area h1, .content-area h2, .content-area h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
+        .content-area h1, .content-area h2, .content-area h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; border: none; padding: 0;}
         .content-area h1 { font-size: 2em; }
         .content-area h2 { font-size: 1.5em; }
         .content-area h3 { font-size: 1.25em; }
-        .content-area p { margin-bottom: 1em; line-height: 1.7; }
-        .content-area ul { list-style: disc; padding-left: 2em; margin-bottom: 1em; }
-        .content-area ol { list-style: decimal; padding-left: 2em; margin-bottom: 1em; }
+        .content-area p { margin-bottom: 1em; }
+        .content-area ul, .content-area ol { padding-left: 2em; margin-bottom: 1em; }
         .content-area blockquote { border-left: 4px solid #e5e7eb; padding-left: 1em; margin-left: 0; color: #6b7280; }
-        .content-area pre { background-color: #f3f4f6; padding: 1em; border-radius: 0.5rem; overflow-x: auto; }
-        .content-area code { font-family: monospace; }
+        .content-area pre { background-color: #f3f4f6; padding: 1em; border-radius: 0.5rem; overflow-x: auto; color: #1f2937; }
+        
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
@@ -45,7 +49,7 @@
             // 配置项: 请将 YOUR_WORKER_URL 替换为你的 Cloudflare Worker 地址
             // =================================================================
             config: {
-                workerUrl: 'https://blog.xy193.workers.dev' // 例如: https://my-blog-worker.username.workers.dev
+                workerUrl: 'https://YOUR_WORKER_URL' // 例如: https://my-blog-worker.username.workers.dev
             },
 
             // --- 状态管理 ---
@@ -54,12 +58,22 @@
                 categories: {},
                 recentPosts: [],
                 authToken: localStorage.getItem('authToken'),
+                editorInstance: null
             },
 
             // --- 初始化 ---
             init() {
                 window.addEventListener('hashchange', this.router);
                 window.addEventListener('load', this.router);
+            },
+            
+            // --- 辅助函数 ---
+            helpers: {
+                stripHtmlAndTruncate(html, length) {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const text = doc.body.textContent || "";
+                    return text.length > length ? text.substring(0, length) + '...' : text;
+                }
             },
 
             // --- 路由 ---
@@ -104,7 +118,6 @@
                         const posts = await response.json();
                         App.state.posts = posts;
                         
-                        // 计算分类和最近文章
                         const categories = {};
                         posts.forEach(post => {
                             categories[post.category] = (categories[post.category] || 0) + 1;
@@ -123,6 +136,7 @@
                 event.preventDefault();
                 const username = event.target.username.value;
                 const password = event.target.password.value;
+                // ... (登录逻辑与之前相同)
                 const submitButton = event.target.querySelector('button');
                 const errorMessage = document.getElementById('error-message');
                 submitButton.disabled = true;
@@ -159,6 +173,31 @@
             },
 
             // --- 文章管理 ---
+            showEditor: (post = {}) => {
+                document.getElementById('admin-content').innerHTML = App.templates.postEditor(post);
+                
+                // 初始化 Quill 编辑器
+                App.state.editorInstance = new Quill('#editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            ['blockquote', 'code-block'],
+                            [{'list': 'ordered'}, {'list': 'bullet'}],
+                            [{ 'script': 'sub'}, { 'script': 'super' }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                if (post.content) {
+                    App.state.editorInstance.root.innerHTML = post.content;
+                }
+            },
+
             handlePostFormSubmit: async (event) => {
                 event.preventDefault();
                 const form = event.target;
@@ -170,7 +209,8 @@
                 const postData = {
                     title: form.title.value,
                     category: form.category.value,
-                    content: form.content.value,
+                    imageUrl: form.imageUrl.value,
+                    content: App.state.editorInstance.root.innerHTML,
                     date: isEditing ? form.dataset.date : null
                 };
 
@@ -197,13 +237,6 @@
                 }
             },
 
-            editPost: (slug) => {
-                const post = App.state.posts.find(p => p.slug === slug);
-                if(post) {
-                    document.getElementById('admin-content').innerHTML = App.templates.postEditor(post);
-                }
-            },
-
             deletePost: async (slug) => {
                 if (!confirm('确定要删除这篇文章吗？此操作无法撤销。')) return;
                 try {
@@ -226,7 +259,9 @@
             // --- 模板 ---
             templates: {
                 // --- 页面布局 ---
-                header: () => `
+                header: () => `... (与之前相同)`,
+                sidebar: () => `... (与之前相同)`,
+                 header: () => `
                     <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-8">
                         <a href="#" class="text-2xl font-bold text-gray-900">夏南记</a>
                         <nav class="hidden sm:flex items-center space-x-6 text-gray-600">
@@ -269,7 +304,6 @@
                         </div>
                     </aside>
                 `,
-                
                 mainLayout: (content) => `
                     ${App.templates.header()}
                     <main class="flex flex-col lg:flex-row gap-8 lg:gap-12">
@@ -280,21 +314,30 @@
                 
                 // --- 页面内容 ---
                 homePage: () => `
-                    <div class="space-y-12">
+                    <div class="space-y-8">
                         ${App.state.posts.map(post => `
-                            <article class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                                <div class="flex items-center text-sm text-gray-500 mb-2">
-                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</span>
-                                    <span class="mx-2">&middot;</span>
-                                    <span>${new Date(post.date).toLocaleDateString()}</span>
+                            <article class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center gap-6">
+                                <a href="#/post/${post.slug}" class="block w-full sm:w-1/3 lg:w-1/4 flex-shrink-0">
+                                    <img 
+                                      src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" 
+                                      alt="${post.title}" 
+                                      class="rounded-md w-full h-48 sm:h-full object-cover"
+                                      onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';"
+                                    >
+                                </a>
+                                <div class="flex-grow">
+                                    <div class="flex items-center text-sm text-gray-500 mb-2">
+                                        <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</span>
+                                        <span class="mx-2">&middot;</span>
+                                        <span>${new Date(post.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <h2 class="text-xl font-bold mb-2">
+                                        <a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a>
+                                    </h2>
+                                    <div class="text-gray-600 leading-relaxed text-sm">
+                                        ${App.helpers.stripHtmlAndTruncate(post.content, 120)}
+                                    </div>
                                 </div>
-                                <h2 class="text-2xl font-bold mb-3">
-                                    <a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a>
-                                </h2>
-                                <div class="text-gray-600 leading-relaxed">
-                                    ${marked.parse(post.content.substring(0, 200) + '...')}
-                                </div>
-                                <a href="#/post/${post.slug}" class="text-blue-600 hover:text-blue-800 font-semibold mt-4 inline-block">阅读全文 &rarr;</a>
                             </article>
                         `).join('')}
                     </div>
@@ -310,14 +353,16 @@
                                 <span>发布于 ${new Date(post.date).toLocaleDateString()}</span>
                             </div>
                             <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">${post.title}</h1>
-                            <div class="content-area text-gray-700 leading-loose">
-                                ${marked.parse(post.content)}
+                            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}
+                            <div class="content-area text-gray-700">
+                                ${post.content}
                             </div>
                         </article>
                     `;
                 },
 
-                loginPage: () => `
+                loginPage: () => `... (与之前相同)`,
+                 loginPage: () => `
                     <div class="min-h-screen flex items-center justify-center bg-gray-50">
                         <div class="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
                             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">管理员登录</h2>
@@ -339,7 +384,6 @@
                         </div>
                     </div>
                 `,
-                
                 adminDashboard: () => `
                     <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-8">
                         <h1 class="text-2xl font-bold">管理后台</h1>
@@ -348,7 +392,7 @@
                     <div id="admin-content">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-xl font-semibold">文章列表</h2>
-                            <button onclick="document.getElementById('admin-content').innerHTML = App.templates.postEditor()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">撰写新文章</button>
+                            <button onclick="App.showEditor()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">撰写新文章</button>
                         </div>
                         <div class="bg-white shadow rounded-lg overflow-hidden">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -367,7 +411,7 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${post.category}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(post.date).toLocaleDateString()}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                                <button onclick="App.editPost('${post.slug}')" class="text-indigo-600 hover:text-indigo-900">编辑</button>
+                                                <button onclick="App.showEditor(App.state.posts.find(p => p.slug === '${post.slug}'))" class="text-indigo-600 hover:text-indigo-900">编辑</button>
                                                 <button onclick="App.deletePost('${post.slug}')" class="text-red-600 hover:text-red-900">删除</button>
                                             </td>
                                         </tr>
@@ -385,18 +429,24 @@
                             <h2 class="text-xl font-semibold">${isEditing ? '编辑文章' : '撰写新文章'}</h2>
                             <button onclick="window.location.hash = '/admin/dashboard'" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">返回列表</button>
                         </div>
-                        <form onsubmit="App.handlePostFormSubmit(event)" data-slug="${post.slug || ''}" data-date="${post.date || ''}" class="bg-white p-6 rounded-lg shadow">
-                            <div class="mb-4">
+                        <form onsubmit="App.handlePostFormSubmit(event)" data-slug="${post.slug || ''}" data-date="${post.date || ''}" class="bg-white p-6 rounded-lg shadow space-y-6">
+                            <div>
                                 <label for="title" class="block text-sm font-medium text-gray-700">标题</label>
                                 <input type="text" id="title" name="title" value="${post.title || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                             </div>
-                            <div class="mb-4">
-                                <label for="category" class="block text-sm font-medium text-gray-700">分类</label>
-                                <input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="category" class="block text-sm font-medium text-gray-700">分类</label>
+                                    <input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="imageUrl" class="block text-sm font-medium text-gray-700">配图 URL</label>
+                                    <input type="url" id="imageUrl" name="imageUrl" value="${post.imageUrl || ''}" placeholder="https://example.com/image.jpg" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
                             </div>
-                            <div class="mb-6">
-                                <label for="content" class="block text-sm font-medium text-gray-700">内容 (支持 Markdown)</label>
-                                <textarea id="content" name="content" rows="15" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono">${post.content || ''}</textarea>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">内容</label>
+                                <div id="editor" class="bg-white"></div>
                             </div>
                             <div class="text-right">
                                 <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">保存文章</button>
@@ -406,12 +456,14 @@
                 },
 
                 // --- 组件 ---
-                loader: () => `
+                loader: () => `... (与之前相同)`,
+                 loader: () => `
                     <div class="flex justify-center items-center py-20">
                         <div class="loader"></div>
                     </div>
                 `,
-                
+                notFoundPage: () => `... (与之前相同)`
+                 ,
                 notFoundPage: () => `<div class="text-center py-20">
                     <h1 class="text-4xl font-bold">404 - Not Found</h1>
                     <p class="mt-4 text-gray-600">抱歉，您要找的页面不存在。</p>
@@ -424,3 +476,4 @@
     </script>
 </body>
 </html>
+
