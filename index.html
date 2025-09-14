@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的博客</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .content-area a { color: #3b82f6; text-decoration: underline; }
+        .content-area h1, .content-area h2, .content-area h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
+        .content-area h1 { font-size: 2em; }
+        .content-area h2 { font-size: 1.5em; }
+        .content-area h3 { font-size: 1.25em; }
+        .content-area p { margin-bottom: 1em; line-height: 1.7; }
+        .content-area ul { list-style: disc; padding-left: 2em; margin-bottom: 1em; }
+        .content-area ol { list-style: decimal; padding-left: 2em; margin-bottom: 1em; }
+        .content-area blockquote { border-left: 4px solid #e5e7eb; padding-left: 1em; margin-left: 0; color: #6b7280; }
+        .content-area pre { background-color: #f3f4f6; padding: 1em; border-radius: 0.5rem; overflow-x: auto; }
+        .content-area code { font-family: monospace; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- 页面容器 -->
+    </div>
+
+    <script>
+        const App = {
+            // =================================================================
+            // 配置项: 请将 YOUR_WORKER_URL 替换为你的 Cloudflare Worker 地址
+            // =================================================================
+            config: {
+                workerUrl: 'https://YOUR_WORKER_URL' // 例如: https://my-blog-worker.username.workers.dev
+            },
+
+            // --- 状态管理 ---
+            state: {
+                posts: [],
+                categories: {},
+                recentPosts: [],
+                authToken: localStorage.getItem('authToken'),
+            },
+
+            // --- 初始化 ---
+            init() {
+                window.addEventListener('hashchange', this.router);
+                window.addEventListener('load', this.router);
+            },
+
+            // --- 路由 ---
+            router: async () => {
+                const appContainer = document.getElementById('app');
+                appContainer.innerHTML = App.templates.loader();
+
+                const path = window.location.hash.slice(1) || '/';
+                const parts = path.split('/');
+
+                await App.fetchDataIfNeeded();
+
+                if (path === '/') {
+                    appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage());
+                } else if (parts[1] === 'post' && parts[2]) {
+                    const slug = parts[2];
+                    const post = App.state.posts.find(p => p.slug === slug);
+                    appContainer.innerHTML = App.templates.mainLayout(App.templates.postPage(post));
+                } else if (path === '/admin') {
+                    if (App.state.authToken) {
+                        window.location.hash = '/admin/dashboard';
+                    } else {
+                        appContainer.innerHTML = App.templates.loginPage();
+                    }
+                } else if (path === '/admin/dashboard') {
+                    if (!App.state.authToken) {
+                         window.location.hash = '/admin';
+                         return;
+                    }
+                    appContainer.innerHTML = App.templates.adminDashboard();
+                } else {
+                    appContainer.innerHTML = App.templates.mainLayout(App.templates.notFoundPage());
+                }
+            },
+            
+            // --- 数据获取 ---
+            fetchDataIfNeeded: async () => {
+                if (App.state.posts.length === 0) {
+                    try {
+                        const response = await fetch(`${App.config.workerUrl}/api/posts`);
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        const posts = await response.json();
+                        App.state.posts = posts;
+                        
+                        // 计算分类和最近文章
+                        const categories = {};
+                        posts.forEach(post => {
+                            categories[post.category] = (categories[post.category] || 0) + 1;
+                        });
+                        App.state.categories = categories;
+                        App.state.recentPosts = posts.slice(0, 5);
+
+                    } catch (error) {
+                        console.error("Failed to fetch posts:", error);
+                    }
+                }
+            },
+
+            // --- 认证处理 ---
+            handleLogin: async (event) => {
+                event.preventDefault();
+                const username = event.target.username.value;
+                const password = event.target.password.value;
+                const submitButton = event.target.querySelector('button');
+                const errorMessage = document.getElementById('error-message');
+                submitButton.disabled = true;
+                submitButton.textContent = '登录中...';
+
+                try {
+                    const response = await fetch(`${App.config.workerUrl}/api/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password }),
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        App.state.authToken = data.token;
+                        localStorage.setItem('authToken', data.token);
+                        window.location.hash = '/admin/dashboard';
+                    } else {
+                        errorMessage.textContent = '用户名或密码错误。';
+                        errorMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errorMessage.textContent = '登录失败，请稍后重试。';
+                    errorMessage.classList.remove('hidden');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = '登录';
+                }
+            },
+
+            handleLogout: () => {
+                App.state.authToken = null;
+                localStorage.removeItem('authToken');
+                window.location.hash = '/admin';
+            },
+
+            // --- 文章管理 ---
+            handlePostFormSubmit: async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const slug = form.dataset.slug;
+                const isEditing = !!slug;
+                const method = isEditing ? 'PUT' : 'POST';
+                const url = isEditing ? `${App.config.workerUrl}/api/admin/posts/${slug}` : `${App.config.workerUrl}/api/admin/posts`;
+                
+                const postData = {
+                    title: form.title.value,
+                    category: form.category.value,
+                    content: form.content.value,
+                    date: isEditing ? form.dataset.date : null
+                };
+
+                try {
+                    const response = await fetch(url, {
+                        method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${App.state.authToken}`
+                        },
+                        body: JSON.stringify(postData)
+                    });
+
+                    if (response.ok) {
+                        alert('文章保存成功!');
+                        App.state.posts = []; // 清空缓存，强制重新加载
+                        window.location.hash = '/admin/dashboard';
+                    } else {
+                        throw new Error('保存失败');
+                    }
+                } catch (error) {
+                    console.error('Error saving post:', error);
+                    alert('文章保存失败，请检查网络或联系管理员。');
+                }
+            },
+
+            editPost: (slug) => {
+                const post = App.state.posts.find(p => p.slug === slug);
+                if(post) {
+                    document.getElementById('admin-content').innerHTML = App.templates.postEditor(post);
+                }
+            },
+
+            deletePost: async (slug) => {
+                if (!confirm('确定要删除这篇文章吗？此操作无法撤销。')) return;
+                try {
+                    const response = await fetch(`${App.config.workerUrl}/api/admin/posts/${slug}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${App.state.authToken}` }
+                    });
+                    if (response.ok) {
+                        alert('删除成功!');
+                        App.state.posts = []; // 清空缓存
+                        App.router();
+                    } else {
+                        throw new Error('删除失败');
+                    }
+                } catch (error) {
+                    alert('删除失败，请稍后重试。');
+                }
+            },
+
+            // --- 模板 ---
+            templates: {
+                // --- 页面布局 ---
+                header: () => `
+                    <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-8">
+                        <a href="#" class="text-2xl font-bold text-gray-900">夏南记</a>
+                        <nav class="hidden sm:flex items-center space-x-6 text-gray-600">
+                            <a href="#" class="hover:text-blue-500">首页</a>
+                            <a href="#/admin" class="hover:text-blue-500">管理后台</a>
+                        </nav>
+                         <button class="sm:hidden text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                        </button>
+                    </header>
+                `,
+
+                sidebar: () => `
+                    <aside class="w-full lg:w-1/4 space-y-8">
+                        <div>
+                            <h3 class="font-semibold text-lg border-b pb-2 mb-4">近期文章</h3>
+                            <ul class="space-y-3">
+                                ${App.state.recentPosts.map(post => `
+                                    <li>
+                                        <a href="#/post/${post.slug}" class="text-gray-700 hover:text-blue-600 text-sm flex items-start">
+                                            <span class="text-gray-400 mr-2 mt-1">&#8227;</span>
+                                            <span>${post.title}</span>
+                                        </a>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-lg border-b pb-2 mb-4">分类目录</h3>
+                            <ul class="space-y-3">
+                                ${Object.entries(App.state.categories).map(([category, count]) => `
+                                    <li>
+                                        <a href="#" class="text-gray-700 hover:text-blue-600 text-sm flex justify-between">
+                                            <span>${category}</span>
+                                            <span>(${count})</span>
+                                        </a>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </aside>
+                `,
+                
+                mainLayout: (content) => `
+                    ${App.templates.header()}
+                    <main class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+                        <div class="w-full lg:w-3/4">${content}</div>
+                        ${App.templates.sidebar()}
+                    </main>
+                `,
+                
+                // --- 页面内容 ---
+                homePage: () => `
+                    <div class="space-y-12">
+                        ${App.state.posts.map(post => `
+                            <article class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center text-sm text-gray-500 mb-2">
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</span>
+                                    <span class="mx-2">&middot;</span>
+                                    <span>${new Date(post.date).toLocaleDateString()}</span>
+                                </div>
+                                <h2 class="text-2xl font-bold mb-3">
+                                    <a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a>
+                                </h2>
+                                <div class="text-gray-600 leading-relaxed">
+                                    ${marked.parse(post.content.substring(0, 200) + '...')}
+                                </div>
+                                <a href="#/post/${post.slug}" class="text-blue-600 hover:text-blue-800 font-semibold mt-4 inline-block">阅读全文 &rarr;</a>
+                            </article>
+                        `).join('')}
+                    </div>
+                `,
+                
+                postPage: (post) => {
+                    if (!post) return App.templates.notFoundPage();
+                    return `
+                        <article class="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200">
+                             <div class="flex items-center text-sm text-gray-500 mb-2">
+                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</span>
+                                <span class="mx-2">&middot;</span>
+                                <span>发布于 ${new Date(post.date).toLocaleDateString()}</span>
+                            </div>
+                            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">${post.title}</h1>
+                            <div class="content-area text-gray-700 leading-loose">
+                                ${marked.parse(post.content)}
+                            </div>
+                        </article>
+                    `;
+                },
+
+                loginPage: () => `
+                    <div class="min-h-screen flex items-center justify-center bg-gray-50">
+                        <div class="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+                            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">管理员登录</h2>
+                            <form onsubmit="App.handleLogin(event)">
+                                <div class="mb-4">
+                                    <label for="username" class="block text-sm font-medium text-gray-700">用户名</label>
+                                    <input type="text" id="username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                <div class="mb-6">
+                                    <label for="password" class="block text-sm font-medium text-gray-700">密码</label>
+                                    <input type="password" id="password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                <p id="error-message" class="text-red-500 text-sm mb-4 hidden"></p>
+                                <div>
+                                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">登录</button>
+                                </div>
+                                <p class="text-center mt-4"><a href="#" class="text-blue-500 hover:underline text-sm">返回首页</a></p>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                
+                adminDashboard: () => `
+                    <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-8">
+                        <h1 class="text-2xl font-bold">管理后台</h1>
+                        <button onclick="App.handleLogout()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">退出登录</button>
+                    </header>
+                    <div id="admin-content">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-semibold">文章列表</h2>
+                            <button onclick="document.getElementById('admin-content').innerHTML = App.templates.postEditor()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">撰写新文章</button>
+                        </div>
+                        <div class="bg-white shadow rounded-lg overflow-hidden">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${App.state.posts.map(post => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${post.title}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${post.category}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(post.date).toLocaleDateString()}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                                <button onclick="App.editPost('${post.slug}')" class="text-indigo-600 hover:text-indigo-900">编辑</button>
+                                                <button onclick="App.deletePost('${post.slug}')" class="text-red-600 hover:text-red-900">删除</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `,
+                
+                postEditor: (post = {}) => {
+                    const isEditing = !!post.slug;
+                    return `
+                         <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-semibold">${isEditing ? '编辑文章' : '撰写新文章'}</h2>
+                            <button onclick="window.location.hash = '/admin/dashboard'" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">返回列表</button>
+                        </div>
+                        <form onsubmit="App.handlePostFormSubmit(event)" data-slug="${post.slug || ''}" data-date="${post.date || ''}" class="bg-white p-6 rounded-lg shadow">
+                            <div class="mb-4">
+                                <label for="title" class="block text-sm font-medium text-gray-700">标题</label>
+                                <input type="text" id="title" name="title" value="${post.title || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="category" class="block text-sm font-medium text-gray-700">分类</label>
+                                <input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="mb-6">
+                                <label for="content" class="block text-sm font-medium text-gray-700">内容 (支持 Markdown)</label>
+                                <textarea id="content" name="content" rows="15" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono">${post.content || ''}</textarea>
+                            </div>
+                            <div class="text-right">
+                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">保存文章</button>
+                            </div>
+                        </form>
+                    `
+                },
+
+                // --- 组件 ---
+                loader: () => `
+                    <div class="flex justify-center items-center py-20">
+                        <div class="loader"></div>
+                    </div>
+                `,
+                
+                notFoundPage: () => `<div class="text-center py-20">
+                    <h1 class="text-4xl font-bold">404 - Not Found</h1>
+                    <p class="mt-4 text-gray-600">抱歉，您要找的页面不存在。</p>
+                    <a href="#" class="mt-6 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg">返回首页</a>
+                </div>`
+            }
+        };
+
+        App.init();
+    </script>
+</body>
+</html>
