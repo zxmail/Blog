@@ -6,6 +6,7 @@
     <title>我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script>
         // Tailwind CSS Dark Mode Config
@@ -41,7 +42,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
 
-    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8"></div>
+    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-screen"></div>
     <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-blue-500 hover:bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
     </button>
@@ -200,7 +201,11 @@
                 } 
                 else if (viewName === 'nav') el.innerHTML = App.templates.navEditor();
                 else if (viewName === 'links') el.innerHTML = App.templates.friendlyLinksEditor();
-                else if (viewName === 'settings') el.innerHTML = App.templates.siteSettingsEditor();
+                else if (viewName === 'settings') {
+                   App.fetchSiteStatsIfNeeded(true).then(() => {
+                        el.innerHTML = App.templates.siteSettingsEditor();
+                   });
+                }
                 else if (viewName === 'comments') {
                     App.fetchRecentCommentsIfNeeded(true).then(() => {
                          el.innerHTML = App.templates.commentsManager();
@@ -278,6 +283,8 @@
                     posts_total: form.posts_total.value,
                     categories_total: form.categories_total.value,
                     comments_total: form.comments_total.value,
+                    contact_email: form.contact_email.value,
+                    contact_github: form.contact_github.value,
                 };
                 try {
                     const res = await fetch(`${App.config.workerUrl}/api/admin/stats`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(statsData) });
@@ -379,7 +386,38 @@
                         </div>
                     </aside>
                 `,
-                mainLayout: (content) => `${App.templates.header()}<main class="flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>`,
+                footer: () => {
+                    const stats = App.state.siteStats || {};
+                    const year = new Date().getFullYear();
+                    return `
+                    <footer class="mt-auto pt-10 text-sm text-gray-500 dark:text-gray-400">
+                        <div class="border-t border-gray-200 dark:border-gray-700 py-8">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">网站统计</h4>
+                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total || 0}</span></p>
+                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total || 0}</span></p>
+                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total || 0}</span></p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">联系方式</h4>
+                                    ${stats.contact_email ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-envelope w-4 text-center"></i><a href="mailto:${stats.contact_email}" class="hover:text-blue-500">${stats.contact_email}</a></p>` : ''}
+                                    ${stats.contact_github ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fab fa-github w-4 text-center"></i><a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500">GitHub</a></p>` : ''}
+                                </div>
+                                <div>
+                                     <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">关于本站</h4>
+                                     <p>Powered by Cloudflare Workers & Pages.</p>
+                                     <p>Theme designed with Tailwind CSS.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-200 dark:border-gray-700 py-4 text-center">
+                            <p>&copy; ${year} 夏商记. All Rights Reserved.</p>
+                        </div>
+                    </footer>
+                    `;
+                },
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
                 homePage: (posts, title = "所有文章") => `...`,
                 postCard: (post) => `...`,
                 postPage: (post) => { /* ... no changes ... */ },
@@ -431,7 +469,17 @@
                     return `
                     <h2 class="text-xl font-semibold mb-6">网站设置</h2>
                     <form onsubmit="App.handleStatsFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-                        <h3 class="text-lg font-medium">网站统计基数</h3>
+                        <h3 class="text-lg font-medium">联系方式</h3>
+                        <div>
+                           <label for="contact_email" class="block text-sm font-medium">联系邮箱</label>
+                           <input type="email" id="contact_email" name="contact_email" value="${stats.contact_email || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
+                        </div>
+                        <div>
+                           <label for="contact_github" class="block text-sm font-medium">GitHub 地址</label>
+                           <input type="url" id="contact_github" name="contact_github" value="${stats.contact_github || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
+                        </div>
+
+                        <h3 class="text-lg font-medium pt-4 border-t dark:border-gray-700">网站统计基数</h3>
                         <p class="text-sm text-gray-500">这里设置的值将作为统计的基数。最终显示的值会取这个基数和实际动态统计值中的较大者。</p>
                         <div>
                            <label for="posts_total" class="block text-sm font-medium">文章总数</label>
