@@ -42,9 +42,10 @@
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
 
-    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-screen"></div>
+    <div id="app" class="flex flex-col min-h-screen"></div>
+    
     <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-blue-500 hover:bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 M5 15l7-7 7 7" /></svg>
     </button>
 
     <script>
@@ -333,21 +334,24 @@
                         ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`
                         : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`;
 
+                    // MODIFICATION 2: Header is now full-width with an inner container for content
                     return `
-                    <header class="flex justify-between items-center h-[62px] border-b border-gray-200 dark:border-gray-700 mb-8">
-                        <div class="flex items-center gap-4">
-                            <a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                <svg class="w-8 h-8" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 64a448 448 0 1 1 0 896a448 448 0 0 1 0-896m0 832a384 384 0 0 0 0-768a384 384 0 0 0 0 768m-48-448a48 48 0 1 1 96 0a48 48 0 0 1-96 0m-128-64a48 48 0 1 1 96 0a48 48 0 0 1-96 0m256 0a48 48 0 1 1 96 0a48 48 0 0 1-96 0m-128 128a48 48 0 1 1 96 0a48 48 0 0 1-96 0"></path></svg>
-                                <span>夏商记</span>
-                            </a>
-                             ${renderTopLevelMenu(App.state.navItems)}
-                        </div>
-                        <div class="flex items-center gap-4 text-gray-600 dark:text-gray-300">
-                           <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                           </button>
-                           <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
-                           <a href="#/admin" class="text-sm hover:underline">登录</a>
+                    <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                        <div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8">
+                            <div class="flex items-center gap-4">
+                                <a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <svg class="w-8 h-8" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 64a448 448 0 1 1 0 896a448 448 0 0 1 0-896m0 832a384 384 0 0 0 0-768a384 384 0 0 0 0 768m-48-448a48 48 0 1 1 96 0a48 48 0 0 1-96 0m-128-64a48 48 0 1 1 96 0a48 48 0 0 1-96 0m256 0a48 48 0 1 1 96 0a48 48 0 0 1-96 0m-128 128a48 48 0 1 1 96 0a48 48 0 0 1-96 0"></path></svg>
+                                    <span>夏商记</span>
+                                </a>
+                                 ${renderTopLevelMenu(App.state.navItems)}
+                            </div>
+                            <div class="flex items-center gap-4 text-gray-600 dark:text-gray-300">
+                               <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                               </button>
+                               <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
+                               <a href="#/admin" class="text-sm hover:underline">登录</a>
+                            </div>
                         </div>
                     </header>`;
                 },
@@ -417,7 +421,8 @@
                     </footer>
                     `;
                 },
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
+                // MODIFICATION 3: Main layout now applies max-width and padding to the <main> element
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
                 homePage: (posts, title = "所有文章") => `...`,
                 postCard: (post) => `...`,
                 postPage: (post) => { /* ... no changes ... */ },
