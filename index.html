@@ -45,7 +45,7 @@
     <div id="app" class="flex flex-col min-h-screen"></div>
     
     <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-blue-500 hover:bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 M5 15l7-7 7 7" /></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
     </button>
 
     <script>
@@ -334,7 +334,6 @@
                         ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`
                         : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`;
 
-                    // MODIFICATION 2: Header is now full-width with an inner container for content
                     return `
                     <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                         <div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8">
@@ -393,35 +392,37 @@
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const year = new Date().getFullYear();
+                    // MODIFICATION: Added full-width container and centered inner container
                     return `
-                    <footer class="mt-auto pt-10 text-sm text-gray-500 dark:text-gray-400">
-                        <div class="border-t border-gray-200 dark:border-gray-700 py-8">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">网站统计</h4>
-                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total || 0}</span></p>
-                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total || 0}</span></p>
-                                    <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total || 0}</span></p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">联系方式</h4>
-                                    ${stats.contact_email ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-envelope w-4 text-center"></i><a href="mailto:${stats.contact_email}" class="hover:text-blue-500">${stats.contact_email}</a></p>` : ''}
-                                    ${stats.contact_github ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fab fa-github w-4 text-center"></i><a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500">GitHub</a></p>` : ''}
-                                </div>
-                                <div>
-                                     <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">关于本站</h4>
-                                     <p>Powered by Cloudflare Workers & Pages.</p>
-                                     <p>Theme designed with Tailwind CSS.</p>
+                    <footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="py-8">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">网站统计</h4>
+                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total || 0}</span></p>
+                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total || 0}</span></p>
+                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total || 0}</span></p>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">联系方式</h4>
+                                        ${stats.contact_email ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-envelope w-4 text-center"></i><a href="mailto:${stats.contact_email}" class="hover:text-blue-500">${stats.contact_email}</a></p>` : ''}
+                                        ${stats.contact_github ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fab fa-github w-4 text-center"></i><a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500">GitHub</a></p>` : ''}
+                                    </div>
+                                    <div>
+                                         <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">关于本站</h4>
+                                         <p>Powered by Cloudflare Workers & Pages.</p>
+                                         <p>Theme designed with Tailwind CSS.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="border-t border-gray-200 dark:border-gray-700 py-4 text-center">
-                            <p>&copy; ${year} 夏商记. All Rights Reserved.</p>
+                            <div class="border-t border-gray-200 dark:border-gray-700 py-4 text-center">
+                                <p>&copy; ${year} 夏商记. All Rights Reserved.</p>
+                            </div>
                         </div>
                     </footer>
                     `;
                 },
-                // MODIFICATION 3: Main layout now applies max-width and padding to the <main> element
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
                 homePage: (posts, title = "所有文章") => `...`,
                 postCard: (post) => `...`,
