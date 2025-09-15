@@ -21,8 +21,18 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #back-to-top { position: fixed; bottom: 2rem; right: 2rem; display: none; }
         /* Dropdown styles */
-        .group:hover .group-hover\:block { display: block; }
-        .group .group-hover\:block { display: none; }
+        .group .dropdown-menu {
+            display: none;
+        }
+        .group:hover .dropdown-menu {
+            display: block;
+        }
+        .group .sub-menu {
+             display: none;
+        }
+        .group-hover\:block .sub-menu {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -204,42 +214,6 @@
 
             templates: {
                 header: () => {
-                    const renderMenuItems = (items) => {
-                        if (!items || items.length === 0) return '';
-                        const isSubmenu = items.some(item => item.children);
-                        let ulClass = isSubmenu 
-                            ? 'absolute hidden group-hover:block bg-white shadow-md rounded-md mt-2 py-1 z-10 w-48 border' 
-                            : 'hidden sm:flex items-center space-x-6 text-gray-600';
-
-                        if(items.some(item => item.children && item.children.length > 0) && !isSubmenu){
-                             ulClass = 'hidden sm:flex items-center space-x-6 text-gray-600';
-                        }
-                        
-                        return `<ul class="${ulClass}">
-                            ${items.map(item => `
-                                <li class="relative group">
-                                    <a href="${item.url}" class="block px-4 py-2 hover:bg-gray-100 hover:text-blue-500 whitespace-nowrap">${item.label}</a>
-                                    ${item.children ? renderMenuItems(item.children) : ''}
-                                </li>
-                            `).join('')}
-                        </ul>`;
-                    };
-
-                     const renderTopLevelMenu = (items) => {
-                        return `<nav class="hidden sm:flex items-center space-x-1 text-gray-600">
-                            ${items.map(item => `
-                                <div class="relative group">
-                                    <a href="${item.url}" class="px-4 py-2 hover:text-blue-500 flex items-center gap-1">
-                                        ${item.label}
-                                        ${item.children && item.children.length > 0 ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>' : ''}
-                                    </a>
-                                    ${item.children && item.children.length > 0 ? `<div class="absolute hidden group-hover:block bg-white shadow-lg rounded-md mt-1 py-1 z-20 w-48 border">${renderSubMenuItems(item.children)}</div>` : ''}
-                                </div>
-                            `).join('')}
-                             <a href="#/admin" class="px-4 py-2 hover:text-blue-500">管理后台</a>
-                        </nav>`;
-                    };
-                    
                     const renderSubMenuItems = (items) => {
                          return `<ul class="list-none">
                             ${items.map(item => `
@@ -253,6 +227,21 @@
                             `).join('')}
                         </ul>`;
                     }
+
+                     const renderTopLevelMenu = (items) => {
+                        return `<nav class="hidden sm:flex items-center space-x-1 text-gray-600">
+                            ${items.map(item => `
+                                <div class="relative group">
+                                    <a href="${item.url}" class="px-4 py-2 hover:text-blue-500 flex items-center gap-1">
+                                        ${item.label}
+                                        ${item.children && item.children.length > 0 ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>' : ''}
+                                    </a>
+                                    ${item.children && item.children.length > 0 ? `<div class="absolute hidden dropdown-menu bg-white shadow-lg rounded-md mt-1 py-1 z-20 w-48 border">${renderSubMenuItems(item.children)}</div>` : ''}
+                                </div>
+                            `).join('')}
+                             <a href="#/admin" class="px-4 py-2 hover:text-blue-500">管理后台</a>
+                        </nav>`;
+                    };
 
                     return `
                     <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-8">
@@ -349,4 +338,8 @@
     </script>
 </body>
 </html>
+"
+修改成如图红线框所示
+1、在右边增加网站统计功能
+2、再增加个搜索功能，后台也增加网站统计和搜索的修改
 
