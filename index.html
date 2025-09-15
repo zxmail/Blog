@@ -65,7 +65,8 @@
                 comments: {}, // keyed by slug
                 theme: localStorage.getItem('theme') || 'light',
                 authToken: localStorage.getItem('authToken'),
-                editorInstance: null
+                editorInstance: null,
+                carouselInterval: null
             },
 
             init() {
@@ -95,6 +96,51 @@
                     themeToggleButton.innerHTML = themeIcon;
                 }
             },
+            
+            // MODIFICATION 1: Added Carousel functionality
+            initCarousel() {
+                const container = document.getElementById('carousel-container');
+                if (!container) return;
+                
+                if (this.state.carouselInterval) clearInterval(this.state.carouselInterval);
+
+                let currentSlide = 0;
+                const slides = container.querySelectorAll('.carousel-slide');
+                const dots = container.querySelectorAll('.carousel-dot');
+                const totalSlides = slides.length;
+
+                if (totalSlides === 0) return;
+
+                const showSlide = (index) => {
+                    slides.forEach((slide, i) => {
+                        slide.classList.toggle('opacity-100', i === index);
+                        slide.classList.toggle('opacity-0', i !== index);
+                    });
+                    dots.forEach((dot, i) => {
+                        dot.classList.toggle('bg-white', i === index);
+                        dot.classList.toggle('bg-white/50', i !== index);
+                    });
+                    currentSlide = index;
+                };
+
+                const nextSlide = () => {
+                    showSlide((currentSlide + 1) % totalSlides);
+                };
+
+                const prevSlide = () => {
+                    showSlide((currentSlide - 1 + totalSlides) % totalSlides);
+                };
+
+                document.getElementById('carousel-next')?.addEventListener('click', nextSlide);
+                document.getElementById('carousel-prev')?.addEventListener('click', prevSlide);
+                dots.forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        showSlide(parseInt(dot.dataset.slideTo));
+                    });
+                });
+
+                this.state.carouselInterval = setInterval(nextSlide, 5000);
+            },
 
             handleScroll() { /* ... no changes ... */ },
             helpers: { /* ... no changes ... */ },
@@ -122,6 +168,7 @@
 
                 if (path === '/') {
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(App.state.posts));
+                    App.initCarousel(); // Initialize carousel after rendering homepage
                 } else if (parts[1] === 'post' && parts[2]) {
                     const slug = parts[2];
                     const post = await App.fetchSinglePost(slug);
@@ -136,14 +183,17 @@
                     const query = decodeURIComponent(parts[2]);
                     const results = await App.fetchSearchResults(query);
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(results, `搜索结果: "${query}"`));
+                    App.initCarousel();
                 } else if (parts[1] === 'category' && parts.length > 2) {
                     const categoryName = parts.slice(2).map(decodeURIComponent).join('/');
                     const filteredPosts = App.state.posts.filter(p => p.category && p.category.startsWith(categoryName));
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(filteredPosts, `分类: ${categoryName}`));
+                    App.initCarousel();
                 } else if (parts[1] === 'tag' && parts[2]) {
                     const tagName = decodeURIComponent(parts[2]);
                     const filteredPosts = App.state.posts.filter(p => p.tags && p.tags.includes(tagName));
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(filteredPosts, `标签: ${tagName}`));
+                    App.initCarousel();
                 } else if (path === '/admin') {
                     if (App.state.authToken) window.location.hash = '/admin/dashboard';
                     else appContainer.innerHTML = App.templates.loginPage();
@@ -440,39 +490,46 @@
                     `;
                 },
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
-                featuredPostCard: (post) => `
-                    <article class="relative rounded-lg shadow-lg overflow-hidden h-64 sm:h-80 group">
-                        <a href="#/post/${post.slug}" class="block w-full h-full">
-                            <img src="${post.imageUrl || 'https://placehold.co/800x400/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src='https://placehold.co/800x400/e2e8f0/cbd5e0?text=Image';">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-                        </a>
-                        <div class="absolute bottom-0 left-0 p-4 sm:p-6 text-white w-full">
-                            <a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-blue-600 mb-2 inline-block">${post.category}</a>
-                            <h2 class="text-xl sm:text-2xl font-bold truncate"><a href="#/post/${post.slug}" class="hover:underline">${post.isPinned ? '<span class="text-red-400 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2>
-                            <div class="flex items-center text-xs text-gray-300 mt-2">
-                                <span>${new Date(post.date).toLocaleDateString()}</span>
-                                <span class="mx-2">&middot;</span>
-                                <div class="flex items-center gap-1">
-                                    <i class="fas fa-eye"></i>
-                                    <span>${post.views || 0}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-                `,
-                homePage: (posts, title = "最新文章") => {
-                    if (posts.length === 0) {
-                        return `<h1 class="text-2xl font-bold mb-6">${title}</h1><p>没有找到相关文章。</p>`;
-                    }
-                    const featuredPost = posts[0];
-                    const otherPosts = posts.slice(1);
+                
+                // MODIFICATION 1: New template for the carousel
+                carousel: () => {
+                    // 您可以在这里替换成您自己的图片链接
+                    const images = [
+                        'https://placehold.co/1200x230/3b82f6/ffffff?text=Carousel+Image+1',
+                        'https://placehold.co/1200x230/ef4444/ffffff?text=Carousel+Image+2',
+                        'https://placehold.co/1200x230/22c55e/ffffff?text=Carousel+Image+3'
+                    ];
                     return `
-                        ${App.templates.featuredPostCard(featuredPost)}
-                        <div class="mt-8">
-                            ${otherPosts.length > 0 ? `<h2 class="text-2xl font-bold mb-6">${title}</h2>` : ''}
-                            <div class="space-y-8">
-                                ${otherPosts.map(post => App.templates.postCard(post)).join('')}
+                    <div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg mb-8">
+                        ${images.map((src, index) => `
+                            <div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${index === 0 ? 'opacity-100' : 'opacity-0'}">
+                                <img src="${src}" class="w-full h-full object-cover" alt="Carousel Image ${index + 1}">
                             </div>
+                        `).join('')}
+                        
+                        <button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-colors">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-colors">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        
+                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                            ${images.map((_, index) => `
+                                <button class="carousel-dot h-3 w-3 rounded-full transition-colors ${index === 0 ? 'bg-white' : 'bg-white/50'}" data-slide-to="${index}"></button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    `;
+                },
+
+                // MODIFICATION 2: Homepage now shows carousel and a simple list of all posts
+                homePage: (posts, title = "最新文章") => {
+                    return `
+                        ${App.templates.carousel()}
+                        <h1 class="text-2xl font-bold mb-6">${title}</h1>
+                        <div class="space-y-8">
+                            ${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p>没有找到相关文章。</p>'}
                         </div>
                     `;
                 },
