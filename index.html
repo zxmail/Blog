@@ -85,12 +85,13 @@
                 this.state.theme = this.state.theme === 'light' ? 'dark' : 'light';
                 localStorage.setItem('theme', this.state.theme);
                 this.applyTheme();
-                // Re-render header to update icon
-                const header = document.querySelector('header');
-                if(header) {
-                  const newHeader = document.createElement('div');
-                  newHeader.innerHTML = this.templates.header();
-                  header.parentNode.replaceChild(newHeader.firstChild, header);
+                // Re-render just the icon, not the whole header
+                const themeToggleButton = document.getElementById('theme-toggle-button');
+                if(themeToggleButton) {
+                    const themeIcon = this.state.theme === 'light'
+                        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`
+                        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`;
+                    themeToggleButton.innerHTML = themeIcon;
                 }
             },
 
@@ -112,7 +113,7 @@
                     App.fetchSiteStatsIfNeeded()
                 ]);
 
-                if (path === '/' || parts[1] === 'category' || parts[1] === 'tag') {
+                if (path === '/' || parts[1] === 'category' || parts[1] === 'tag' || path.startsWith('/search')) {
                    await App.fetchDataIfNeeded(true);
                 } else {
                    await App.fetchDataIfNeeded();
@@ -157,11 +158,11 @@
             fetchDataIfNeeded: async (forceRefresh = false) => { /* ... no changes ... */ },
             fetchTagsIfNeeded: async () => { /* ... no changes ... */ },
             fetchFriendlyLinksIfNeeded: async () => { /* ... no changes ... */ },
-            fetchRecentCommentsIfNeeded: async () => { /* ... no changes ... */ },
+            fetchRecentCommentsIfNeeded: async (forceRefresh = false) => { if (App.state.recentComments.length === 0 || forceRefresh) { try { const res = await fetch(`${App.config.workerUrl}/api/comments/recent`); App.state.recentComments = await res.json(); } catch (e) { console.error("Fetch recent comments error:", e); } } },
             fetchCommentsForPost: async (slug) => { /* ... no changes ... */ },
             fetchSinglePost: async (slug) => { /* ... no changes ... */ },
-            fetchSiteStatsIfNeeded: async () => {
-                if (!App.state.siteStats) {
+            fetchSiteStatsIfNeeded: async (forceRefresh = false) => {
+                if (!App.state.siteStats || forceRefresh) {
                      try {
                         const res = await fetch(`${App.config.workerUrl}/api/stats`);
                         App.state.siteStats = await res.json();
@@ -182,7 +183,8 @@
             handleLogout: () => { /* ... no changes ... */ },
             handleSearchSubmit: (event) => {
                 event.preventDefault();
-                const query = event.target.query.value.trim();
+                const queryInput = event.target.querySelector('[name="query"]');
+                const query = queryInput.value.trim();
                 if (query) {
                     window.location.hash = `#/search/${encodeURIComponent(query)}`;
                 }
@@ -200,7 +202,7 @@
                 else if (viewName === 'links') el.innerHTML = App.templates.friendlyLinksEditor();
                 else if (viewName === 'settings') el.innerHTML = App.templates.siteSettingsEditor();
                 else if (viewName === 'comments') {
-                    App.fetchRecentCommentsIfNeeded().then(() => {
+                    App.fetchRecentCommentsIfNeeded(true).then(() => {
                          el.innerHTML = App.templates.commentsManager();
                     });
                 }
@@ -334,10 +336,10 @@
                              ${renderTopLevelMenu(App.state.navItems)}
                         </div>
                         <div class="flex items-center gap-4 text-gray-600 dark:text-gray-300">
-                           <button id="search-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                           <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                            </button>
-                           <button onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
+                           <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
                            <a href="#/admin" class="text-sm hover:underline">登录</a>
                         </div>
                     </header>`;
@@ -346,7 +348,7 @@
                     <aside class="w-full lg:w-1/4 space-y-8">
                          <div>
                             <form onsubmit="App.handleSearchSubmit(event)" class="relative">
-                                <input type="search" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700">
+                                <input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700">
                                 <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 </button>
@@ -459,7 +461,6 @@
         App.fetchDataIfNeeded = async (forceRefresh = false) => { if (App.state.posts.length === 0 || forceRefresh) { try { const res = await fetch(`${App.config.workerUrl}/api/posts`); const posts = await res.json(); App.state.posts = posts; const categories = {}; posts.forEach(p => { const catParts = p.category.split('/'); catParts.forEach((part, i) => { const catPath = catParts.slice(0, i + 1).join('/'); categories[catPath] = (categories[catPath] || 0) + 1; }); }); App.state.categories = categories; App.state.recentPosts = posts.slice(0, 5); } catch (e) { console.error("Fetch posts error:", e); } } };
         App.fetchTagsIfNeeded = async () => { if (App.state.tags.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/tags`); App.state.tags = await res.json(); } catch (e) { console.error(e); } } };
         App.fetchFriendlyLinksIfNeeded = async () => { if (App.state.friendlyLinks.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/links`); App.state.friendlyLinks = await res.json(); } catch (e) { console.error("Fetch links error:", e); } } };
-        App.fetchRecentCommentsIfNeeded = async () => { if (App.state.recentComments.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/comments/recent`); App.state.recentComments = await res.json(); } catch (e) { console.error("Fetch recent comments error:", e); } } };
         App.fetchCommentsForPost = async (slug) => { try { const res = await fetch(`${App.config.workerUrl}/api/comments/${slug}`); App.state.comments[slug] = await res.json(); } catch (e) { console.error(`Fetch comments for ${slug} error:`, e); App.state.comments[slug] = []; } };
         App.fetchSinglePost = async (slug) => { try { const response = await fetch(`${App.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { console.error("Fetch single post error:", error); return null; } };
         App.handleLogin = async (e) => { e.preventDefault(); const { username, password } = e.target; try { const res = await fetch(`${App.config.workerUrl}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.value, password: password.value }) }); const data = await res.json(); if (data.success) { App.state.authToken = data.token; localStorage.setItem('authToken', data.token); window.location.hash = '/admin/dashboard'; } else { alert('登录失败'); } } catch (err) { alert('登录出错'); } };
