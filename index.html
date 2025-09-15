@@ -32,7 +32,7 @@
     <script>
         const App = {
             config: {
-                workerUrl: 'https://blog.xy193.workers.dev' // 请替换为您的 Worker URL
+                workerUrl: 'https://blog.053503.xyz' // 请替换为您的 Worker URL
             },
             state: {
                 posts: [],
@@ -88,15 +88,10 @@
                     const slug = parts[2];
                     const post = await App.fetchSinglePost(slug); // Fetch single post to increment views
                     
-                    // Update the post in the main state array
                     if (post) {
                         const postIndex = App.state.posts.findIndex(p => p.slug === slug);
-                        if (postIndex > -1) {
-                            App.state.posts[postIndex] = post;
-                        } else {
-                            // If post wasn't in the list, add it (edge case)
-                            App.state.posts.unshift(post);
-                        }
+                        if (postIndex > -1) App.state.posts[postIndex] = post;
+                        else App.state.posts.unshift(post);
                     }
 
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.postPage(post));
@@ -133,23 +128,14 @@
                             categories[post.category] = (categories[post.category] || 0) + 1;
                         });
                         App.state.categories = categories;
+                        // Update recent posts based on the newly sorted list
                         App.state.recentPosts = posts.slice(0, 5);
                     } catch (error) {
                         console.error("Fetch posts error:", error);
                     }
                 }
             },
-            fetchTagsIfNeeded: async () => {
-                 if (App.state.tags.length === 0) {
-                     try {
-                        const response = await fetch(`${App.config.workerUrl}/api/tags`);
-                        if (!response.ok) throw new Error('Failed to fetch tags');
-                        App.state.tags = await response.json();
-                    } catch (error) {
-                        console.error("Fetch tags error:", error);
-                    }
-                }
-            },
+            fetchTagsIfNeeded: async () => { /* ... no changes ... */ },
             
             fetchSinglePost: async (slug) => {
                 try {
@@ -184,7 +170,8 @@
                     imageUrl: form.imageUrl.value,
                     content: App.state.editorInstance.root.innerHTML,
                     tags: tags,
-                    views: form.views.value, // Capture views from form
+                    views: form.views.value,
+                    isPinned: form.isPinned.checked, // Capture isPinned state
                     date: isEditing ? form.dataset.date : null
                 };
 
@@ -225,8 +212,21 @@
                     <aside class="w-full lg:w-1/4 space-y-8">
                         <div>
                             <h3 class="font-semibold text-lg border-b pb-2 mb-4">近期文章</h3>
-                            <ul class="space-y-3">
-                                ${App.state.recentPosts.map(post => `<li><a href="#/post/${post.slug}" class="text-gray-700 hover:text-blue-600 text-sm flex items-start"><span class="text-gray-400 mr-2 mt-1">&#8227;</span><span>${post.title}</span></a></li>`).join('')}
+                            <ul class="space-y-4">
+                                ${App.state.recentPosts.map(post => `
+                                    <li>
+                                        <a href="#/post/${post.slug}" class="flex items-center gap-3 group">
+                                            <img src="${post.imageUrl || 'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';">
+                                            <div>
+                                                 <p class="text-sm font-medium text-gray-800 group-hover:text-blue-600 leading-snug">
+                                                    ${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}
+                                                    ${post.title}
+                                                 </p>
+                                                 <p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p>
+                                            </div>
+                                        </a>
+                                    </li>
+                                `).join('')}
                             </ul>
                         </div>
                         <div>
@@ -258,7 +258,12 @@
                         </div>
                         <div class="p-5 flex-grow flex flex-col justify-between self-stretch">
                             <div>
-                                <h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">${post.title}</a></h2>
+                                <h2 class="text-xl font-bold mb-2">
+                                    <a href="#/post/${post.slug}" class="text-gray-900 hover:text-blue-600">
+                                        ${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}
+                                        ${post.title}
+                                    </a>
+                                </h2>
                                 <div class="text-gray-600 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div>
                             </div>
                             <div class="flex justify-between items-center text-xs text-gray-500 mt-2">
@@ -271,32 +276,7 @@
                         </div>
                     </article>
                 `,
-                postPage: (post) => {
-                    if (!post) return App.templates.notFoundPage();
-                    return `
-                        <article class="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200">
-                             <div class="flex items-center text-sm text-gray-500 mb-4">
-                                <a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a>
-                                <span class="mx-2">&middot;</span>
-                                <span>发布于 ${new Date(post.date).toLocaleDateString()}</span>
-                                <span class="mx-2">&middot;</span>
-                                <div class="flex items-center gap-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    <span>${post.views || 0}</span>
-                                </div>
-                            </div>
-                            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">${post.title}</h1>
-                            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}
-                            <div class="content-area text-gray-700">
-                                ${post.content}
-                            </div>
-                             <div class="mt-8 pt-4 border-t flex flex-wrap gap-2">
-                                ${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }
-                                ${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200">${tag}</a>`).join('')}
-                            </div>
-                        </article>
-                    `;
-                },
+                postPage: (post) => { /* ... no changes ... */ },
                 loginPage: () => `...`,
                 adminDashboard: () => `...`,
                 postManager: () => `...`,
@@ -313,9 +293,15 @@
                                <label for="tags" class="block text-sm font-medium text-gray-700">标签 (用英文逗号,隔开)</label>
                                <input type="text" id="tags" name="tags" value="${(post.tags || []).join(', ')}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                            </div>
-                           <div>
-                               <label for="views" class="block text-sm font-medium text-gray-700">浏览量</label>
-                               <input type="number" id="views" name="views" value="${post.views || 0}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                           <div class="flex items-center gap-4">
+                               <div>
+                                   <label for="views" class="block text-sm font-medium text-gray-700">浏览量</label>
+                                   <input type="number" id="views" name="views" value="${post.views || 0}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                               </div>
+                               <div class="mt-6 flex items-center">
+                                    <input type="checkbox" id="isPinned" name="isPinned" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${post.isPinned ? 'checked' : ''}>
+                                    <label for="isPinned" class="ml-2 text-sm font-medium text-gray-700">置顶</label>
+                               </div>
                            </div>
                         </div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">内容</label><div id="editor" class="bg-white"></div></div>
@@ -331,7 +317,8 @@
         // --- 模板函数折叠区 (为简洁，此处省略未修改的模板函数完整代码) ---
         App.helpers.stripHtmlAndTruncate = (html, length) => { const doc = new DOMParser().parseFromString(html, 'text/html'); const text = doc.body.textContent || ""; return text.length > length ? text.substring(0, length) + '...' : text; };
         App.fetchNavIfNeeded = async () => { if (App.state.navItems.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await res.json(); } catch (e) { App.state.navItems = [{ label: '首页', url: '#/' }]; } } };
-        App.fetchDataIfNeeded = async () => { if (App.state.posts.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/posts`); const posts = await res.json(); App.state.posts = posts; const categories = {}; posts.forEach(p => { categories[p.category] = (categories[p.category] || 0) + 1; }); App.state.categories = categories; App.state.recentPosts = posts.slice(0, 5); } catch (e) { console.error(e); } } };
+        // App.fetchDataIfNeeded function is complete above
+        App.fetchTagsIfNeeded = async () => { if (App.state.tags.length === 0) { try { const res = await fetch(`${App.config.workerUrl}/api/tags`); App.state.tags = await res.json(); } catch (e) { console.error(e); } } };
         App.handleLogin = async (e) => { e.preventDefault(); const { username, password } = e.target; try { const res = await fetch(`${App.config.workerUrl}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.value, password: password.value }) }); const data = await res.json(); if (data.success) { App.state.authToken = data.token; localStorage.setItem('authToken', data.token); window.location.hash = '/admin/dashboard'; } else { alert('登录失败'); } } catch (err) { alert('登录出错'); } };
         App.handleLogout = () => { App.state.authToken = null; localStorage.removeItem('authToken'); window.location.hash = '/admin'; };
         App.showView = (viewName, param = null) => { const el = document.getElementById('admin-content'); if (viewName === 'posts') el.innerHTML = App.templates.postManager(); else if (viewName === 'editor') { const post = param ? App.state.posts.find(p => p.slug === param) : {}; el.innerHTML = App.templates.postEditor(post); App.initEditor(post); } else if (viewName === 'nav') el.innerHTML = App.templates.navEditor(); };
@@ -340,7 +327,7 @@
         App.addNavItemRow = () => { const container = document.getElementById('nav-item-list'); const div = document.createElement('div'); div.className = 'nav-item-row flex items-center gap-2 mb-2'; div.innerHTML = `<input type="text" name="label" placeholder="菜单项名称" class="flex-1 px-3 py-2 border rounded"><input type="text" name="url" placeholder="URL" class="flex-1 px-3 py-2 border rounded"><button type="button" onclick="App.removeNavItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded">-</button>`; container.appendChild(div); };
         App.removeNavItemRow = (button) => { button.closest('.nav-item-row').remove(); };
         App.handleNavFormSubmit = async (e) => { e.preventDefault(); const rows = document.querySelectorAll('.nav-item-row'); const newNavItems = Array.from(rows).map(r => ({ label: r.querySelector('[name=label]').value, url: r.querySelector('[name=url]').value })).filter(i => i.label && i.url); try { const res = await fetch(`${App.config.workerUrl}/api/admin/nav`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(newNavItems) }); if (res.ok) { alert('导航更新成功'); App.state.navItems = []; window.location.hash = '/admin/dashboard'; } else throw new Error('更新失败'); } catch (e) { alert('更新失败'); } };
-        App.templates.postPage = (post) => post ? `<article class="bg-white p-6 sm:p-8 rounded-lg shadow-sm"><h1 class="text-3xl sm:text-4xl font-bold mb-6">${post.title}</h1>${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}<div class="content-area">${post.content}</div></article>` : App.templates.notFoundPage();
+        App.templates.postPage = (post) => { if (!post) return App.templates.notFoundPage(); return ` <article class="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200"> <div class="flex items-center text-sm text-gray-500 mb-4"> <a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a> <span class="mx-2">&middot;</span> <span>发布于 ${new Date(post.date).toLocaleDateString()}</span> <span class="mx-2">&middot;</span> <div class="flex items-center gap-1"> <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> <span>${post.views || 0}</span> </div> </div> <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">${post.title}</h1> ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''} <div class="content-area text-gray-700"> ${post.content} </div> <div class="mt-8 pt-4 border-t flex flex-wrap gap-2"> ${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' } ${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200">${tag}</a>`).join('')} </div> </article> `; };
         App.templates.loginPage = () => `<div class="min-h-screen flex items-center justify-center"><div class="max-w-md w-full bg-white p-8 rounded-lg shadow-md"><h2 class="text-2xl font-bold text-center mb-6">管理员登录</h2><form onsubmit="App.handleLogin(event)"><div class="mb-4"><label for="username">用户名</label><input type="text" id="username" name="username" required class="mt-1 block w-full px-3 py-2 border rounded"></div><div class="mb-6"><label for="password">密码</label><input type="password" id="password" name="password" required class="mt-1 block w-full px-3 py-2 border rounded"></div><button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded">登录</button></form></div></div>`;
         App.templates.adminDashboard = () => `<header class="flex justify-between items-center py-4 border-b mb-8"><h1 class="text-2xl font-bold">管理后台</h1><div><a href="#" class="text-blue-500 hover:underline mr-4">返回博客</a><button onclick="App.handleLogout()" class="bg-red-500 text-white py-2 px-4 rounded">退出</button></div></header><div class="flex gap-6"><aside class="w-1/5"><ul class="space-y-2"><li><button onclick="App.showView('posts')" class="w-full text-left font-semibold p-2 rounded hover:bg-gray-200">文章管理</button></li><li><button onclick="App.showView('nav')" class="w-full text-left font-semibold p-2 rounded hover:bg-gray-200">导航设置</button></li></ul></aside><main id="admin-content" class="w-4/5">${App.templates.postManager()}</main></div>`;
         App.templates.postManager = () => `<div class="flex justify-between items-center mb-6"><h2 class="text-xl font-semibold">文章列表</h2><button onclick="App.showView('editor')" class="bg-blue-500 text-white py-2 px-4 rounded">撰写新文章</button></div><div class="bg-white shadow rounded-lg overflow-x-auto"><table class="min-w-full divide-y"><thead><tr><th class="px-6 py-3 text-left">标题</th><th class="px-6 py-3 text-left">分类</th><th class="px-6 py-3 text-left">日期</th><th class="px-6 py-3 text-right">操作</th></tr></thead><tbody>${App.state.posts.map(p => `<tr><td class="px-6 py-4">${p.title}</td><td class="px-6 py-4">${p.category}</td><td class="px-6 py-4">${new Date(p.date).toLocaleDateString()}</td><td class="px-6 py-4 text-right"><button onclick="App.showView('editor', '${p.slug}')" class="text-indigo-600">编辑</button><button onclick="App.deletePost('${p.slug}')" class="text-red-600 ml-2">删除</button></td></tr>`).join('')}</tbody></table></div>`;
