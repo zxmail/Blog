@@ -392,27 +392,40 @@
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const year = new Date().getFullYear();
-                    // MODIFICATION: Added full-width container and centered inner container
+                    // MODIFICATION: Replaced grid with flex-col and adjusted spacing
                     return `
                     <footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div class="py-8">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">网站统计</h4>
-                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total || 0}</span></p>
-                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total || 0}</span></p>
-                                        <p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total || 0}</span></p>
+                                <div class="flex flex-col items-center md:items-start space-y-[13px]">
+                                    <div class="flex items-center">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span>
+                                        <div class="flex items-center ml-2 space-x-[5px]">
+                                            ${stats.contact_email ? `
+                                            <a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}">
+                                                <i class="fas fa-envelope"></i>
+                                                <span>${stats.contact_email}</span>
+                                            </a>` : ''}
+                                            ${stats.contact_github ? `
+                                            <a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500">
+                                                <i class="fab fa-github"></i>
+                                                <span>GitHub</span>
+                                            </a>` : ''}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">联系方式</h4>
-                                        ${stats.contact_email ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fas fa-envelope w-4 text-center"></i><a href="mailto:${stats.contact_email}" class="hover:text-blue-500">${stats.contact_email}</a></p>` : ''}
-                                        ${stats.contact_github ? `<p class="flex items-center justify-center md:justify-start gap-2"><i class="fab fa-github w-4 text-center"></i><a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500">GitHub</a></p>` : ''}
+                                    <div class="flex items-center">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span>
+                                        <div class="flex items-center ml-2 space-x-[5px]">
+                                             <span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total || 0}</span></span>
+                                             <span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total || 0}</span></span>
+                                             <span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total || 0}</span></span>
+                                        </div>
                                     </div>
-                                    <div>
-                                         <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">关于本站</h4>
-                                         <p>Powered by Cloudflare Workers & Pages.</p>
-                                         <p>Theme designed with Tailwind CSS.</p>
+                                    <div class="flex items-center">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span>
+                                        <div class="ml-2">
+                                           <span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
