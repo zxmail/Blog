@@ -533,7 +533,7 @@
                         'https://placehold.co/1200x230/22c55e/ffffff?text=Carousel+Image+3'
                     ];
                     return `
-                    <div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg mb-8">
+                    <div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg">
                         ${images.map((src, index) => `
                             <div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${index === 0 ? 'opacity-100' : 'opacity-0'}">
                                 <img src="${src}" class="w-full h-full object-cover" alt="Carousel Image ${index + 1}">
@@ -555,13 +555,11 @@
                     </div>
                     `;
                 },
-
-                // MODIFIED: Added wrapper div with top margin and restored heading margin
                 homePage: (posts, title = "最新文章") => {
                     return `
                         ${App.templates.carousel()}
                         <div class="mt-[62px]">
-                            <h1 class="text-[1.3rem] font-bold mb-6">${title}</h1>
+                             <h1 class="text-[1.3rem] font-bold mb-6">${title}</h1>
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                                     ${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}
