@@ -39,14 +39,7 @@
         .group-hover\:block .sub-menu { display: block; }
         .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
 
-        /* MODIFICATION 1 & 2: Custom styles for border-radius and padding */
-        .rounded-lg {
-            border-radius: 0.3rem;
-        }
-        .py-8 {
-            padding-top: 1.5rem;
-            padding-bottom: 1.8rem;
-        }
+        /* MODIFICATION 1 & 2: Removed custom styles */
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
@@ -486,20 +479,19 @@
                                     </div>
                                 </div>
                             </div>
-                            </div>
+                        </div>
                     </footer>
                     `;
                 },
-                // MODIFICATION 5: New template for friendly links section
                 friendlyLinksSection: () => {
                     if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
                     return `
                     <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8">
                             <h3 class="font-semibold text-lg mb-4">友情链接</h3>
-                            <div class="flex flex-wrap gap-x-6 gap-y-2">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
                                 ${(App.state.friendlyLinks || []).map(link => `
-                                    <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm">${link.name}</a>
+                                    <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>
                                 `).join('')}
                             </div>
                         </div>
