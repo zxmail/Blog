@@ -402,8 +402,9 @@
                         </div>
                     </header>`;
                 },
+                // MODIFICATION 2: Changed sidebar vertical spacing from space-y-6 to space-y-2 (8px)
                 sidebar: () => `
-                    <aside class="w-full lg:w-1/4 space-y-6">
+                    <aside class="w-full lg:w-1/4 space-y-2">
                          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                             <form onsubmit="App.handleSearchSubmit(event)" class="relative">
                                 <input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
@@ -488,7 +489,8 @@
                     </footer>
                     `;
                 },
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-8 lg:gap-12"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
+                // MODIFICATION 1: Changed main layout gap to 23px
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-[23px]"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
                 
                 carousel: () => {
                     const images = [
@@ -520,7 +522,6 @@
                     `;
                 },
 
-                // MODIFICATION: Changed how homepage posts are rendered
                 homePage: (posts, title = "最新文章") => {
                     return `
                         ${App.templates.carousel()}
@@ -532,7 +533,6 @@
                         </div>
                     `;
                 },
-                // MODIFICATION: postCard is now a list item, not a card
                 postCard: (post) => `
                     <div class="p-6 flex flex-col sm:flex-row items-center">
                         <div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0">
