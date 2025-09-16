@@ -38,6 +38,15 @@
         .group .sub-menu { display: none; }
         .group-hover\:block .sub-menu { display: block; }
         .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
+
+        /* MODIFICATION 1 & 2: Custom styles for border-radius and padding */
+        .rounded-lg {
+            border-radius: 0.3rem;
+        }
+        .py-8 {
+            padding-top: 1.5rem;
+            padding-bottom: 1.8rem;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
@@ -402,7 +411,6 @@
                         </div>
                     </header>`;
                 },
-                // MODIFICATION 2: Changed sidebar vertical spacing from space-y-6 to space-y-2 (8px)
                 sidebar: () => `
                     <aside class="w-full lg:w-1/4 space-y-2">
                          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -434,10 +442,6 @@
                             <div class="flex flex-wrap gap-2">${App.state.tags.map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div>
                         </div>
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                            <h3 class="font-semibold text-lg mb-4">友情链接</h3>
-                            <ul class="space-y-3">${(App.state.friendlyLinks || []).map(link => `<li><a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm">&#8227; ${link.name}</a></li>`).join('')}</ul>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                             <h3 class="font-semibold text-lg mb-4">最近评论</h3>
                             <ul class="space-y-4">${(App.state.recentComments || []).map(comment => `<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content, 50)}</div></li>`).join('')}</ul>
                         </div>
@@ -450,7 +454,7 @@
                     <footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div class="py-8">
-                                <div class="flex flex-col items-center md:items-start space-y-[13px]">
+                                <div class="flex flex-col items-center md:items-start space-y-[10px]">
                                     <div class="flex items-center">
                                         <span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span>
                                         <div class="flex items-center ml-2 space-x-[5px]">
@@ -482,15 +486,27 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="border-t border-gray-200 dark:border-gray-700 py-4 text-center">
-                                <p>&copy; ${year} 夏商记. All Rights Reserved.</p>
                             </div>
-                        </div>
                     </footer>
                     `;
                 },
-                // MODIFICATION 1: Changed main layout gap to 23px
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-[23px]"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.footer()}`,
+                // MODIFICATION 5: New template for friendly links section
+                friendlyLinksSection: () => {
+                    if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
+                    return `
+                    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8">
+                            <h3 class="font-semibold text-lg mb-4">友情链接</h3>
+                            <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                ${(App.state.friendlyLinks || []).map(link => `
+                                    <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm">${link.name}</a>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                },
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-[23px]"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
                 carousel: () => {
                     const images = [
