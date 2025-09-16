@@ -556,13 +556,16 @@
                     `;
                 },
 
+                // MODIFIED: Added wrapper div with top margin and restored heading margin
                 homePage: (posts, title = "最新文章") => {
                     return `
                         ${App.templates.carousel()}
-                        <h1 class="text-[1.3rem] font-bold mb-[62px]">${title}</h1>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                                ${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}
+                        <div class="mt-[62px]">
+                            <h1 class="text-[1.3rem] font-bold mb-6">${title}</h1>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    ${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}
+                                </div>
                             </div>
                         </div>
                     `;
