@@ -47,7 +47,6 @@
             padding-bottom: 1.8rem !important;
         }
         
-        /* MODIFIED: Updated border colors for dark mode */
         .border-gray-200 {
            --tw-border-opacity: 1;
             border-color: rgb(245 245 245 / var(--tw-border-opacity, 1)) !important; /* #f5f5f5 */
@@ -65,7 +64,7 @@
             transition-duration: 300ms;
         }
         .dark body {
-            background-color: #111827; /* Tailwind's gray-900 */
+            background-color: #111827; /* This is Tailwind's gray-900 */
         }
     </style>
 </head>
@@ -560,7 +559,7 @@
                 homePage: (posts, title = "最新文章") => {
                     return `
                         ${App.templates.carousel()}
-                        <h1 class="text-2xl font-bold mb-6">${title}</h1>
+                        <h1 class="text-[1.3rem] font-bold mb-[62px]">${title}</h1>
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                             <div class="divide-y divide-gray-200 dark:divide-gray-700">
                                 ${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}
