@@ -410,7 +410,6 @@
                         ? `<i class="fal fa-moon h-5 w-5"></i>`
                         : `<i class="fal fa-sun h-5 w-5"></i>`;
 
-                    // MODIFIED: Header is now sticky
                     return `
                     <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                         <div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8">
@@ -421,11 +420,11 @@
                                 </a>
                                  ${renderTopLevelMenu(App.state.navItems)}
                             </div>
-                            <div class="flex items-center gap-[15px] text-gray-600 dark:text-gray-300">
-                               <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
+                               <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                                     <i class="fal fa-search h-5 w-5"></i>
                                </button>
-                               <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
+                               <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
                                <a href="#/admin" class="text-sm hover:underline">登录</a>
                             </div>
                         </div>
