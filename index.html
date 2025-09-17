@@ -107,35 +107,38 @@
                 const parts = path.split('/');
                 await Promise.all([ App.fetchNavIfNeeded(), App.fetchTagsIfNeeded(), App.fetchFriendlyLinksIfNeeded(), App.fetchRecentCommentsIfNeeded(), App.fetchSiteStatsIfNeeded() ]);
                 await App.fetchDataIfNeeded();
-
-                let content = '';
+                
+                let contentHtml = '';
                 if (path === '/') {
-                    content = App.templates.homePage(App.state.posts);
-                    setTimeout(App.initCarousel, 0);
+                    contentHtml = App.templates.homePage(App.state.posts);
                 } else if (parts[1] === 'post' && parts[2]) {
                     const slug = parts[2];
                     const post = await App.fetchSinglePost(slug);
                     await App.fetchCommentsForPost(slug);
-                    content = App.templates.postPage(post);
-                } else if (parts[1] === 'search' && parts[2]) {
-                    const query = decodeURIComponent(parts[2]);
-                    const results = await App.fetchSearchResults(query);
-                    content = App.templates.homePage(results, `搜索结果: "${query}"`);
+                    contentHtml = App.templates.postPage(post);
                 } else if (parts[1] === 'category' && parts[2]) {
                     const categoryName = decodeURIComponent(parts[2]);
                     const filteredPosts = App.state.posts.filter(p => p.category && p.category.startsWith(categoryName));
-                    content = App.templates.homePage(filteredPosts, `分类: ${categoryName}`);
+                    contentHtml = App.templates.homePage(filteredPosts, `分类: ${categoryName}`);
                 } else if (parts[1] === 'tag' && parts[2]) {
                     const tagName = decodeURIComponent(parts[2]);
                     const filteredPosts = App.state.posts.filter(p => p.tags && p.tags.includes(tagName));
-                    content = App.templates.homePage(filteredPosts, `标签: ${tagName}`);
+                    contentHtml = App.templates.homePage(filteredPosts, `标签: ${tagName}`);
+                } else if (parts[1] === 'search' && parts[2]) {
+                    const query = decodeURIComponent(parts[2]);
+                    const results = await App.fetchSearchResults(query);
+                    contentHtml = App.templates.homePage(results, `搜索结果: "${query}"`);
                 } else {
-                    content = App.templates.notFoundPage();
+                    contentHtml = App.templates.notFoundPage();
                 }
-                app.innerHTML = App.templates.mainLayout(content);
+
+                app.innerHTML = App.templates.mainLayout(contentHtml);
+                
+                if (path === '/' || path.startsWith('/category') || path.startsWith('/tag') || path.startsWith('/search')) {
+                    setTimeout(App.initCarousel, 0);
+                }
             },
             
-            // --- Data Fetching Functions ---
             fetchNavIfNeeded: async () => { if (App.state.navItems.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await r.json(); } catch (e) { App.state.navItems = [{ label: '首页', url: '#/' }]; } },
             fetchDataIfNeeded: async () => { if (App.state.posts.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/posts`); const p = await r.json(); App.state.posts = p; const c = {}; p.forEach(post => { if(post.category) c[post.category] = (c[post.category] || 0) + 1; }); App.state.categories = c; App.state.recentPosts = p.slice(0, 5); } catch (e) {} },
             fetchTagsIfNeeded: async () => { if (App.state.tags.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/tags`); App.state.tags = await r.json(); } catch (e) {} },
@@ -165,17 +168,41 @@
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(c=>`<li><div class="text-sm"><span class="font-semibold">${c.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${c.slug}" class="text-blue-500 hover:underline">${c.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(c.content,50)}</div></li>`).join('')}</ul></div>
                     </aside>
                 `,
-                footer: () => { /* ... footer template ... */ },
-                friendlyLinksSection: () => { /* ... friendly links template ... */ },
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><main class="flex flex-col lg:flex-row gap-[23px] py-8"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>${App.templates.friendlyLinksSection()}</div></div>${App.templates.footer()}`,
-                carousel: () => { /* ... carousel template ... */ },
+                footer: () => {
+                    const stats = App.state.siteStats || {};
+                    return `
+                    <footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div>
+                        </div>
+                    </footer>`;
+                },
+                friendlyLinksSection: () => {
+                    if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
+                    return `<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`;
+                },
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><main class="flex flex-col lg:flex-row gap-[23px] py-8"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+                carousel: () => {
+                    const images = [ 'https://placehold.co/1200x230/3b82f6/ffffff?text=Banner+1', 'https://placehold.co/1200x230/ef4444/ffffff?text=Banner+2', 'https://placehold.co/1200x230/22c55e/ffffff?text=Banner+3' ];
+                    return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg"><div class="flex transition-transform duration-500 ease-in-out" style="width: ${images.length*100}%">${images.map(src=>`<div class="w-full flex-shrink-0"><img src="${src}" class="w-full h-full object-cover"></div>`).join('')}</div><button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${images.map((_,i)=>`<button class="carousel-dot h-3 w-3 rounded-full bg-white/50" data-slide-to="${i}"></button>`).join('')}</div></div>`;
+                },
                 homePage: (posts, title = "最新文章") => {
                     return `<div class="mt-[18px]"><h1 class="text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length>0?posts.map(p=>App.templates.postCard(p)).join(''):'<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`;
                 },
-                postCard: (post) => `...`,
-                postPage: (post) => { /* ... post page template ... */ },
-                commentForm: (slug) => `...`,
-                commentsSection: (slug) => { /* ... */ },
+                postCard: (post) => `
+                    <div class="p-6 flex flex-col sm:flex-row items-center">
+                        <div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0">
+                            <a href="#/post/${post.slug}" class="block"><img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-48 sm:h-full object-cover rounded-md"></a>
+                            <a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a>
+                        </div>
+                        <div class="pt-5 sm:pt-0 sm:pl-5 flex-grow flex flex-col justify-between self-stretch">
+                            <div><h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2><div class="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div></div>
+                            <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-2"><span>${new Date(post.date).toLocaleDateString()}</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div>
+                        </div>
+                    </div>`,
+                postPage: (post) => { if (!post) return App.templates.notFoundPage(); const commentsHtml = App.templates.commentsSection(post.slug); const commentFormHtml = App.templates.commentForm(post.slug); return ` <article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"> <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4"><a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a><span class="mx-2">&middot;</span><span>发布于 ${new Date(post.date).toLocaleDateString()}</span><span class="mx-2">&middot;</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div> <h1 class="text-3xl sm:text-4xl font-bold mb-6">${post.title}</h1> ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''} <div class="content-area">${post.content}</div> <div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap gap-2">${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div> </article> ${commentsHtml} ${commentFormHtml} `; },
+                commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
+                commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return ` <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"> <h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3> <div class="space-y-6"> ${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'} </div> </div> `; },
                 loader: () => `<div class="flex justify-center items-center py-20"><div class="loader"></div></div>`,
                 notFoundPage: () => `<div class="text-center py-20"><h1 class="text-4xl font-bold">404</h1><p class="mt-4">页面不存在</p><a href="#" class="mt-6 inline-block bg-blue-500 text-white px-6 py-2 rounded">返回首页</a></div>`
             }
