@@ -95,7 +95,6 @@
                 const container = document.getElementById('carousel-container');
                 if (!container) return;
                 if (this.state.carouselInterval) clearInterval(this.state.carouselInterval);
-
                 const settings = this.state.carouselSettings || { transition: 'fade', speed: 700, delay: 5000, slides: [] };
                 
                 let currentSlide = 0;
@@ -193,7 +192,6 @@
                     setTimeout(App.initCarousel, 0);
                 }
             },
-            
             fetchNavIfNeeded: async () => { if (App.state.navItems.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await r.json(); } catch (e) { App.state.navItems = [{ label: '首页', url: '#/' }]; } },
             fetchDataIfNeeded: async () => { if (App.state.posts.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/posts`); const p = await r.json(); App.state.posts = p; const c = {}; p.forEach(post => { if(post.category) c[post.category] = (c[post.category] || 0) + 1; }); App.state.categories = c; App.state.recentPosts = p.slice(0, 5); } catch (e) {} },
             fetchTagsIfNeeded: async () => { if (App.state.tags.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/tags`); App.state.tags = await r.json(); } catch (e) {} },
@@ -236,7 +234,7 @@
                 carousel: () => {
                     const settings = App.state.carouselSettings || { slides: [] };
                     if (settings.slides.length === 0) return '';
-                    return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg">${settings.slides.map((slide, i)=>`<a href="${slide.linkUrl || '#'}" target="_blank" rel="noopener noreferrer" class="carousel-slide absolute w-full h-full" style="transition-property: opacity, transform; transition-timing-function: ease-in-out; opacity: ${i===0?1:0};"><img src="${slide.imageUrl}" class="w-full h-full object-cover"></a>`).join('')}<button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${settings.slides.map((_,i)=>`<button class="carousel-dot h-3 w-3 rounded-full ${i===0?'bg-white':'bg-white/50'}" data-slide-to="${i}"></button>`).join('')}</div></div>`;
+                    return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg">${settings.slides.map((slide, i)=>`<a href="${slide.linkUrl || '#'}" target="_blank" rel="noopener noreferrer" class="carousel-slide absolute w-full h-full" style="transition-property: opacity, transform; transition-timing-function: ease-in-out; opacity: ${i===0?1:0};"><img src="${slide.imageUrl}" class="w-full h-full object-cover" alt="Carousel image ${i+1}"></a>`).join('')}<button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${settings.slides.map((_,i)=>`<button class="carousel-dot h-3 w-3 rounded-full ${i===0?'bg-white':'bg-white/50'}" data-slide-to="${i}"></button>`).join('')}</div></div>`;
                 },
                 homePage: (posts, title = "最新文章") => {
                     return `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length>0?posts.map(p=>App.templates.postCard(p)).join(''):'<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`;
