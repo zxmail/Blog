@@ -73,7 +73,7 @@
     <div id="app" class="flex flex-col min-h-screen"></div>
     
     <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-blue-500 hover:bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center">
-      <i class="fas fa-arrow-up"></i>
+      <i class="fal fa-arrow-up"></i>
     </button>
 
     <script>
@@ -119,8 +119,8 @@
                 const themeToggleButton = document.getElementById('theme-toggle-button');
                 if(themeToggleButton) {
                     const themeIcon = this.state.theme === 'light'
-                        ? `<i class="fas fa-moon h-5 w-5"></i>`
-                        : `<i class="fas fa-sun h-5 w-5"></i>`;
+                        ? `<i class="fal fa-moon h-5 w-5"></i>`
+                        : `<i class="fal fa-sun h-5 w-5"></i>`;
                     themeToggleButton.innerHTML = themeIcon;
                 }
             },
@@ -407,8 +407,8 @@
                     };
 
                     const themeIcon = App.state.theme === 'light'
-                        ? `<i class="fas fa-moon h-5 w-5"></i>`
-                        : `<i class="fas fa-sun h-5 w-5"></i>`;
+                        ? `<i class="fal fa-moon h-5 w-5"></i>`
+                        : `<i class="fal fa-sun h-5 w-5"></i>`;
 
                     return `
                     <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -422,7 +422,7 @@
                             </div>
                             <div class="flex items-center gap-4 text-gray-600 dark:text-gray-300">
                                <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                                    <i class="fas fa-search h-5 w-5"></i>
+                                    <i class="fal fa-search h-5 w-5"></i>
                                </button>
                                <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button>
                                <a href="#/admin" class="text-sm hover:underline">登录</a>
@@ -436,7 +436,7 @@
                             <form onsubmit="App.handleSearchSubmit(event)" class="relative">
                                 <input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
                                 <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <i class="fas fa-search"></i>
+                                    <i class="fal fa-search"></i>
                                 </button>
                             </form>
                         </div>
