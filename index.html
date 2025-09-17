@@ -49,7 +49,7 @@
     <script>
         const App = {
             config: {
-                workerUrl: 'https://blog.xy193.workers.dev' // 请替换为您自己的Worker URL
+                workerUrl: 'https://blog.xy193.workers.dev' // 请替换为您的 Worker URL
             },
             state: {
                 posts: [], navItems: [], tags: [], categories: {}, recentPosts: [],
@@ -131,10 +131,8 @@
                 } else {
                     contentHtml = App.templates.notFoundPage();
                 }
-
                 app.innerHTML = App.templates.mainLayout(contentHtml);
-                
-                if (path === '/' || path.startsWith('/category') || path.startsWith('/tag') || path.startsWith('/search')) {
+                if (['/', '/category', '/tag', '/search'].some(p => path.startsWith(p))) {
                     setTimeout(App.initCarousel, 0);
                 }
             },
@@ -170,21 +168,16 @@
                 `,
                 footer: () => {
                     const stats = App.state.siteStats || {};
-                    return `
-                    <footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div>
-                        </div>
-                    </footer>`;
+                    return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div></div></footer>`;
                 },
                 friendlyLinksSection: () => {
                     if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
-                    return `<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`;
+                    return `<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div>`;
                 },
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><main class="flex flex-col lg:flex-row gap-[23px] py-8"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main></div>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><main class="flex flex-col lg:flex-row gap-[23px] py-8"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>${App.templates.friendlyLinksSection()}</div></div>${App.templates.footer()}`,
                 carousel: () => {
                     const images = [ 'https://placehold.co/1200x230/3b82f6/ffffff?text=Banner+1', 'https://placehold.co/1200x230/ef4444/ffffff?text=Banner+2', 'https://placehold.co/1200x230/22c55e/ffffff?text=Banner+3' ];
-                    return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg"><div class="flex transition-transform duration-500 ease-in-out" style="width: ${images.length*100}%">${images.map(src=>`<div class="w-full flex-shrink-0"><img src="${src}" class="w-full h-full object-cover"></div>`).join('')}</div><button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${images.map((_,i)=>`<button class="carousel-dot h-3 w-3 rounded-full bg-white/50" data-slide-to="${i}"></button>`).join('')}</div></div>`;
+                    return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg">${images.map((src, i)=>`<div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${i===0?'opacity-100':'opacity-0'}"><img src="${src}" class="w-full h-full object-cover" alt="Carousel Image ${i+1}"></div>`).join('')}<button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${images.map((_,i)=>`<button class="carousel-dot h-3 w-3 rounded-full bg-white/50" data-slide-to="${i}"></button>`).join('')}</div></div>`;
                 },
                 homePage: (posts, title = "最新文章") => {
                     return `<div class="mt-[18px]"><h1 class="text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length>0?posts.map(p=>App.templates.postCard(p)).join(''):'<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`;
