@@ -6,13 +6,29 @@
     <title>我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
         html { scroll-behavior: smooth; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .ql-editor { min-height: 250px; font-size: 16px; line-height: 1.7; }
+        .content-area { font-size: 16px; line-height: 1.7; }
         .content-area a { color: #3b82f6; text-decoration: underline; }
         .dark .content-area a { color: #60a5fa; }
         .content-area h1, .content-area h2, .content-area h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; border: none; padding: 0;}
+        .content-area h1 { font-size: 2em; } .content-area h2 { font-size: 1.5em; } .content-area h3 { font-size: 1.25em; }
+        .content-area p { margin-bottom: 1em; } .content-area ul, .content-area ol { padding-left: 2em; margin-bottom: 1em; }
+        .content-area blockquote { border-left: 4px solid #e5e7eb; padding-left: 1em; margin-left: 0; color: #6b7280; }
+        .dark .content-area blockquote { border-color: #4b5563; color: #9ca3af; }
+        .content-area pre { background-color: #f3f4f6; padding: 1em; border-radius: 0.5rem; overflow-x: auto; color: #1f2937; }
+        .dark .content-area pre { background-color: #1f2937; color: #d1d5db; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .dark .loader { border-color: #4b5563; border-top-color: #60a5fa;}
         #back-to-top { position: fixed; bottom: 2rem; right: 2rem; display: none; }
         .group .dropdown-menu { display: none; }
         .group:hover .dropdown-menu { display: block; }
@@ -34,9 +50,6 @@
         .dark body { background-color: #111827; }
         .carousel-slide { transition-property: opacity, transform; }
     </style>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
 
@@ -82,7 +95,6 @@
                 const container = document.getElementById('carousel-container');
                 if (!container) return;
                 if (this.state.carouselInterval) clearInterval(this.state.carouselInterval);
-
                 const settings = this.state.carouselSettings || { transition: 'fade', speed: 700, delay: 5000, slides: [] };
                 
                 let currentSlide = 0;
@@ -177,7 +189,7 @@
                 app.innerHTML = App.templates.mainLayout(contentHtml);
                 
                 if (['/', '/category', '/tag', '/search'].some(p => path.startsWith(p) || path === p)) {
-                    setTimeout(() => App.initCarousel(), 0); // MODIFIED THIS LINE
+                    setTimeout(() => App.initCarousel(), 0);
                 }
             },
             fetchNavIfNeeded: async () => { if (App.state.navItems.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await r.json(); } catch (e) { App.state.navItems = [{ label: '首页', url: '#/' }]; } },
@@ -200,8 +212,8 @@
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
                     return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><i class="fas fa-cat text-2xl"></i><span>夏商记</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`;
                 },
-                sidebar: () => {
-                    return `<aside class="w-full lg:w-1/4 space-y-2">
+                sidebar: () => `
+                    <aside class="w-full lg:w-1/4 space-y-2">
                          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span> <span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span> <span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span> <span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(p=>`<li><a href="#/post/${p.slug}" class="flex items-center gap-3 group"><img src="${p.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${p.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0"><div><p class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${p.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${p.title}</p><p class="text-xs text-gray-400 mt-1">${new Date(p.date).toLocaleDateString()}</p></div></a></li>`).join('')}</ul></div>
@@ -209,8 +221,7 @@
                          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(t=>`<a href="#/tag/${encodeURIComponent(t)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700">${t}</a>`).join('')}</div></div>
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(c=>`<li><div class="text-sm"><span class="font-semibold">${c.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${c.slug}" class="text-blue-500 hover:underline">${c.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(c.content,50)}</div></li>`).join('')}</ul></div>
                     </aside>
-                `;
-                },
+                `,
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div></div></footer>`;
@@ -243,7 +254,7 @@
                     if (!post) return App.templates.notFoundPage();
                     const commentsHtml = App.templates.commentsSection(post.slug); 
                     const commentFormHtml = App.templates.commentForm(post.slug);
-                    return `<article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4"><a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a><span class="mx-2">&middot;</span><span>发布于 ${new Date(post.date).toLocaleDateString()}</span><span class="mx-2">&middot;</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div> <h1 class="text-3xl sm:text-4xl font-bold mb-6">${post.title}</h1> ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''} <div class="content-area">${post.content}</div> <div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap gap-2">${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div> </article> ${commentsHtml} ${commentFormHtml} `;
+                    return ` <article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"> <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4"><a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a><span class="mx-2">&middot;</span><span>发布于 ${new Date(post.date).toLocaleDateString()}</span><span class="mx-2">&middot;</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div> <h1 class="text-3xl sm:text-4xl font-bold mb-6">${post.title}</h1> ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''} <div class="content-area">${post.content}</div> <div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap gap-2">${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div> </article> ${commentsHtml} ${commentFormHtml} `;
                 },
                 commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
                 commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return ` <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"> <h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3> <div class="space-y-6"> ${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'} </div> </div> `; },
