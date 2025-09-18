@@ -190,11 +190,8 @@
                     App.fetchSiteStatsIfNeeded()
                 ]);
 
-                if (path === '/' || parts[1] === 'category' || parts[1] === 'tag' || path.startsWith('/search')) {
-                   await App.fetchDataIfNeeded(true);
-                } else {
-                   await App.fetchDataIfNeeded();
-                }
+                // Always fetch post list for next/prev navigation to work
+                await App.fetchDataIfNeeded();
 
                 if (path === '/') {
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(App.state.posts));
@@ -596,7 +593,73 @@
                             </div>
                         </div>
                     </div>`,
-                postPage: (post) => { if (!post) return App.templates.notFoundPage(); const commentsHtml = App.templates.commentsSection(post.slug); const commentFormHtml = App.templates.commentForm(post.slug); return ` <article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"> <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4"><a href="#/category/${encodeURIComponent(post.category)}" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${post.category}</a><span class="mx-2">&middot;</span><span>发布于 ${new Date(post.date).toLocaleDateString()}</span><span class="mx-2">&middot;</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div> <h1 class="text-3xl sm:text-4xl font-bold mb-6">${post.title}</h1> ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''} <div class="content-area">${post.content}</div> <div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap gap-2">${ (post.tags && post.tags.length > 0) ? '<span class="font-semibold">标签:</span>' : '' }${ (post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div> </article> ${commentsHtml} ${commentFormHtml} `; },
+                postPage: (post) => {
+                    if (!post) return App.templates.notFoundPage();
+
+                    // Find previous and next posts
+                    const postIndex = App.state.posts.findIndex(p => p.slug === post.slug);
+                    const prevPost = App.state.posts[postIndex + 1]; // Note: index+1 is previous because posts are sorted date descending
+                    const nextPost = App.state.posts[postIndex - 1];
+
+                    const commentsHtml = App.templates.commentsSection(post.slug);
+                    const commentFormHtml = App.templates.commentForm(post.slug);
+
+                    const postNavigationHtml = `
+                        <div class="mt-8 flex justify-between gap-2 sm:gap-4 text-white">
+                            ${prevPost ? `
+                                <a href="#/post/${prevPost.slug}" class="relative w-1/2 h-20 rounded-md overflow-hidden block group">
+                                    <img src="${prevPost.imageUrl || 'https://placehold.co/400x96/7f9cf5/ffffff?text=Prev'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${prevPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Prev';">
+                                    <div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center">
+                                        <span class="text-xs font-light"><< 上一篇</span>
+                                        <span class="font-semibold mt-1 text-sm truncate">${prevPost.title}</span>
+                                    </div>
+                                </a>
+                            ` : '<div class="w-1/2"></div>' /* Empty div to maintain layout */}
+                            ${nextPost ? `
+                                <a href="#/post/${nextPost.slug}" class="relative w-1/2 h-20 rounded-md overflow-hidden block group">
+                                    <img src="${nextPost.imageUrl || 'https://placehold.co/400x96/7f9cf5/ffffff?text=Next'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${nextPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Next';">
+                                    <div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center text-right">
+                                        <span class="text-xs font-light">下一篇 >></span>
+                                        <span class="font-semibold mt-1 text-sm truncate">${nextPost.title}</span>
+                                    </div>
+                                </a>
+                            ` : '<div class="w-1/2"></div>' /* Empty div to maintain layout */}
+                        </div>
+                    `;
+
+                    return `
+                        <article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                                <a href="#" class="hover:text-blue-500">首页</a>
+                                <span class="mx-1 sm:mx-2">></span>
+                                <a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a>
+                                <span class="mx-1 sm:mx-2">></span>
+                                <span>正文</span>
+                            </div>
+                            <div class="text-center border-b dark:border-gray-700 pb-5 mb-6">
+                                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">${post.title}</h1>
+                                <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-3 space-x-2 sm:space-x-4">
+                                    <span>${new Date(post.date).toLocaleDateString().replace(/\//g, '-')}</span>
+                                    <span>分类: <a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a></span>
+                                    <span>阅读(${post.views || 0})</span>
+                                    <span>评论(${App.state.comments[post.slug]?.length || 0})</span>
+                                </div>
+                            </div>
+
+                            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}
+                            <div class="content-area">${post.content}</div>
+
+                            <div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap items-center gap-2">
+                                ${(post.tags && post.tags.length > 0) ? '<span class="font-semibold text-sm">标签:</span>' : ''}
+                                ${(post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}
+                            </div>
+                            
+                            ${postNavigationHtml}
+                        </article>
+                        ${commentsHtml}
+                        ${commentFormHtml}
+                    `;
+                },
                 commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname" class="block text-sm font-medium mb-1">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content" class="block text-sm font-medium mb-1">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
                 commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return ` <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"> <h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3> <div class="space-y-6"> ${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'} </div> </div> `; },
                 loginPage: () => `<div class="min-h-screen flex items-center justify-center"><div class="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md"><h2 class="text-2xl font-bold text-center mb-6">管理员登录</h2><form onsubmit="App.handleLogin(event)"><div class="mb-4"><label for="username">用户名</label><input type="text" id="username" name="username" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-6"><label for="password">密码</label><input type="password" id="password" name="password" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded">登录</button></form></div></div>`,
