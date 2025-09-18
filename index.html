@@ -536,17 +536,17 @@
                         'https://placehold.co/1200x230/22c55e/ffffff?text=Carousel+Image+3'
                     ];
                     return `
-                    <div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg">
+                    <div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg group">
                         ${images.map((src, index) => `
                             <div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${index === 0 ? 'opacity-100' : 'opacity-0'}">
                                 <img src="${src}" class="w-full h-full object-cover" alt="Carousel Image ${index + 1}">
                             </div>
                         `).join('')}
                         
-                        <button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-colors">
+                        <button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-colors">
+                        <button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                         
