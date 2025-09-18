@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kindeditor@4.1.10/themes/default/default.css" />
-    <script src="https://cdn.jsdelivr.net/npm/kindeditor@4.1.10/kindeditor-all-min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/kindeditor@4.1.10/lang/zh_CN.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/kindeditor/4.1.10/themes/default/default.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/kindeditor/4.1.10/kindeditor-all-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/kindeditor/4.1.10/lang/zh_CN.js"></script>
 
     <script>
         // Tailwind CSS Dark Mode Config
@@ -377,33 +377,37 @@
             },
             
             initEditor: (post = {}) => {
-                // Ensure no previous instances are running
-                if (App.state.editorInstance) {
-                    App.state.editorInstance.remove();
-                    App.state.editorInstance = null;
-                }
-                KindEditor.ready(function(K) {
-                    App.state.editorInstance = K.create('#editor-textarea', {
-                        width: '100%',
-                        height: '400px',
-                        resizeType: 1, // Allow vertical resizing
-                        allowFileManager: false,
-                        langType: 'zh_CN',
-                        items: [
-                            'source', '|', 'undo', 'redo', '|', 'preview', 'print', 'template', 'code', 'cut', 'copy', 'paste',
-                            'plainpaste', 'wordpaste', '|', 'justifyleft', 'justifycenter', 'justifyright',
-                            'justifyfull', 'insertorderedlist', 'insertunorderedlist', 'indent', 'outdent', 'subscript',
-                            'superscript', 'clearhtml', 'quickformat', 'selectall', '|', 'fullscreen', '/',
-                            'formatblock', 'fontname', 'fontsize', '|', 'forecolor', 'hilitecolor', 'bold',
-                            'italic', 'underline', 'strikethrough', 'lineheight', 'removeformat', '|', 'image', 'multiimage',
-                            'flash', 'media', 'insertfile', 'table', 'hr', 'emoticons', 'pagebreak',
-                            'anchor', 'link', 'unlink', '|', 'about'
-                        ]
-                    });
-                    if (post.content) {
-                       App.state.editorInstance.html(post.content);
+                // Add a small delay to ensure the DOM is ready
+                setTimeout(() => {
+                    if (App.state.editorInstance) {
+                        App.state.editorInstance.remove();
+                        App.state.editorInstance = null;
                     }
-                });
+                    KindEditor.ready(function(K) {
+                        if (document.getElementById('editor-textarea')) {
+                             App.state.editorInstance = K.create('#editor-textarea', {
+                                width: '100%',
+                                height: '400px',
+                                resizeType: 1, // Allow vertical resizing
+                                allowFileManager: false,
+                                langType: 'zh_CN',
+                                items: [
+                                    'source', '|', 'undo', 'redo', '|', 'preview', 'print', 'template', 'code', 'cut', 'copy', 'paste',
+                                    'plainpaste', 'wordpaste', '|', 'justifyleft', 'justifycenter', 'justifyright',
+                                    'justifyfull', 'insertorderedlist', 'insertunorderedlist', 'indent', 'outdent', 'subscript',
+                                    'superscript', 'clearhtml', 'quickformat', 'selectall', '|', 'fullscreen', '/',
+                                    'formatblock', 'fontname', 'fontsize', '|', 'forecolor', 'hilitecolor', 'bold',
+                                    'italic', 'underline', 'strikethrough', 'lineheight', 'removeformat', '|', 'image', 'multiimage',
+                                    'flash', 'media', 'insertfile', 'table', 'hr', 'emoticons', 'pagebreak',
+                                    'anchor', 'link', 'unlink', '|', 'about'
+                                ]
+                            });
+                            if (post.content) {
+                               App.state.editorInstance.html(post.content);
+                            }
+                        }
+                    });
+                }, 10);
             },
 
             handlePostFormSubmit: async (event) => {
@@ -451,6 +455,7 @@
 
 
             templates: {
+                // ... other templates are unchanged ...
                 header: () => {
                     const renderSubMenuItems = (items) => {
                          return `<ul class="list-none">
