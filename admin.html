@@ -241,7 +241,7 @@
                     <div class="w-full">
                         <h2 class="text-xl font-semibold mb-6">图标列表 (Font Awesome 5 Pro)</h2>
                         <p class="text-sm text-gray-500 mb-4">
-                            点击图标即可复制其CSS类名。使用时请根据需要添加样式前缀 (例如: <code>fas</code>, <code>far</code>, <code>fal</code>, <code>fab</code>)。
+                            点击图标即可复制其CSS类名。代码已自动处理品牌和通用图标的显示问题。
                         </p>
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow" style="max-height: 70vh; overflow-y: auto;">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2">
@@ -251,7 +251,10 @@
                                     <div class="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" 
                                          onclick="navigator.clipboard.writeText('${classToCopy}')" 
                                          title="点击复制: ${classToCopy}">
-                                        <i class="fas ${classToCopy} fa-fw text-lg mr-3 text-center w-6"></i>
+                                        <span class="fa-stack fa-fw w-6 mr-3 text-lg text-center">
+                                            <i class="fas ${classToCopy}"></i>
+                                            <i class="fab ${classToCopy}"></i>
+                                        </span>
                                         <span class="text-sm">${classToCopy}</span>
                                     </div>
                                     `
