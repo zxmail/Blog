@@ -3,125 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的博客 - 管理后台</title>
+    <title>管理后台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' };
     </script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .ql-editor { min-height: 250px; font-size: 16px; line-height: 1.7; }
-        .rounded-lg { border-radius: 0.3rem !important; }
-        .rounded-md { border-radius: 0.1rem !important; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .dark .loader { border-color: #4b5563; border-top-color: #60a5fa;}
+        .dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]),
+        .dark .dark\:border-gray-700 { border-color: rgb(55 65 81 / 1) !important; }
+        body { background-color: #f5f5f5; }
+        .dark body { background-color: #111827; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+<body class="text-gray-800 dark:text-gray-200">
 
     <div id="app"></div>
 
     <script>
         const App = {
             config: {
-                workerUrl: 'https://blog.xy193.workers.dev' // 请替换为您自己的Worker URL
+                workerUrl: 'https://blog.xy193.workers.dev' // 请替换为您的 Worker URL
             },
             state: {
-                posts: [], navItems: [], friendlyLinks: [], recentComments: [], siteStats: null, categories: {},
-                authToken: localStorage.getItem('authToken'), editorInstance: null
+                posts: [],
+                navItems: [],
+                friendlyLinks: [],
+                recentComments: [],
+                siteStats: null,
+                theme: localStorage.getItem('theme') || 'light',
+                authToken: localStorage.getItem('authToken'),
+                editorInstance: null
             },
+
             init() {
-                if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
-                this.router();
+                this.applyTheme();
+                window.addEventListener('load', this.router);
             },
             
+            applyTheme() {
+                if (this.state.theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            },
+
             router: async () => {
                 const appContainer = document.getElementById('app');
-                if (!App.state.authToken) {
+                if (App.state.authToken) {
+                    appContainer.innerHTML = App.templates.loader();
+                    await Promise.all([
+                        App.fetchDataIfNeeded(),
+                        App.fetchNavIfNeeded(),
+                        App.fetchFriendlyLinksIfNeeded(),
+                        App.fetchRecentCommentsIfNeeded(true),
+                        App.fetchSiteStatsIfNeeded(true)
+                    ]);
+                    appContainer.innerHTML = App.templates.adminDashboard();
+                } else {
                     appContainer.innerHTML = App.templates.loginPage();
-                    return;
                 }
-                appContainer.innerHTML = `<div class="flex justify-center items-center py-20"><div class="border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-12 h-12 animate-spin"></div></div>`;
-                await Promise.all([ App.fetchDataIfNeeded(), App.fetchNavIfNeeded(), App.fetchFriendlyLinksIfNeeded(), App.fetchRecentCommentsIfNeeded(true), App.fetchSiteStatsIfNeeded(true) ]);
-                appContainer.innerHTML = App.templates.adminDashboard();
             },
             
-            fetchDataIfNeeded: async (force = true) => {
-                if (App.state.posts.length === 0 || force) {
-                    try {
-                        const r = await fetch(`${App.config.workerUrl}/api/admin/posts`, { headers: { 'Authorization': `Bearer ${App.state.authToken}` } });
-                        if (r.status === 401) { alert('您的登录已过期，请重新登录。'); App.handleLogout(); return; }
-                        if (!r.ok) throw new Error('Failed to fetch posts');
-                        const p = await r.json(); App.state.posts = p; const c = {}; p.forEach(post => { if(post.category) c[post.category] = (c[post.category] || 0) + 1; }); App.state.categories = c;
-                    } catch (e) { console.error("Fetch posts error", e); }
-                }
-            },
-            fetchNavIfNeeded: async () => { if (App.state.navItems.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await r.json(); } catch (e) {} },
-            fetchFriendlyLinksIfNeeded: async () => { if (App.state.friendlyLinks.length === 0) try { const r = await fetch(`${App.config.workerUrl}/api/links`); App.state.friendlyLinks = await r.json(); } catch (e) {} },
-            fetchRecentCommentsIfNeeded: async (force = true) => { if (App.state.recentComments.length === 0 || force) try { const r = await fetch(`${App.config.workerUrl}/api/admin/comments`, { headers: { 'Authorization': `Bearer ${App.state.authToken}` } }); if(r.ok) App.state.recentComments = await r.json(); } catch (e) {} },
-            fetchSiteStatsIfNeeded: async (force = true) => { if (!App.state.siteStats || force) try { const r = await fetch(`${App.config.workerUrl}/api/stats`); if(r.ok) App.state.siteStats = await r.json(); } catch (e) {} },
-
-            handleLogin: async (event) => {
-                event.preventDefault();
-                const { username, password } = event.target;
+            // --- Admin Actions ---
+            handleLogin: async (e) => {
+                e.preventDefault();
+                const { username, password } = e.target;
                 try {
-                    const res = await fetch(`${App.config.workerUrl}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.value, password: password.value }) });
+                    const res = await fetch(`${App.config.workerUrl}/api/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: username.value, password: password.value })
+                    });
                     const data = await res.json();
-                    if (data.success) { localStorage.setItem('authToken', data.token); window.location.reload(); } 
-                    else { alert('登录失败'); }
+                    if (data.success) {
+                        App.state.authToken = data.token;
+                        localStorage.setItem('authToken', data.token);
+                        App.router();
+                    } else { alert('登录失败'); }
                 } catch (err) { alert('登录出错'); }
             },
             handleLogout: () => {
-                localStorage.removeItem('authToken');
                 App.state.authToken = null;
+                localStorage.removeItem('authToken');
                 App.router();
             },
-            showView: (viewName, param = null) => {
+            showView: async (viewName, param = null) => {
                 const el = document.getElementById('admin-content');
-                if(!el) return;
-                if (viewName === 'posts') el.innerHTML = App.templates.postManager();
-                else if (viewName === 'editor') { const post = param ? App.state.posts.find(p => p.slug === param) : {}; el.innerHTML = App.templates.postEditor(post); App.initEditor(post); } 
-                else if (viewName === 'nav') el.innerHTML = App.templates.navEditor();
-                else if (viewName === 'links') el.innerHTML = App.templates.friendlyLinksEditor();
-                else if (viewName === 'settings') el.innerHTML = App.templates.siteSettingsEditor();
-                else if (viewName === 'comments') el.innerHTML = App.templates.commentsManager();
+                if (!el) return;
+                el.innerHTML = App.templates.loader();
+
+                if (viewName === 'posts') {
+                    await App.fetchDataIfNeeded(true);
+                    el.innerHTML = App.templates.postManager();
+                } else if (viewName === 'editor') {
+                    const post = param ? App.state.posts.find(p => p.slug === param) : {};
+                    el.innerHTML = App.templates.postEditor(post);
+                    App.initEditor(post);
+                } else if (viewName === 'nav') {
+                    await App.fetchNavIfNeeded(true);
+                    el.innerHTML = App.templates.navEditor();
+                } else if (viewName === 'links') {
+                    await App.fetchFriendlyLinksIfNeeded(true);
+                    el.innerHTML = App.templates.friendlyLinksEditor();
+                } else if (viewName === 'settings') {
+                    await App.fetchSiteStatsIfNeeded(true);
+                    el.innerHTML = App.templates.siteSettingsEditor();
+                } else if (viewName === 'comments') {
+                    await App.fetchRecentCommentsIfNeeded(true);
+                    el.innerHTML = App.templates.commentsManager();
+                }
             },
-            initEditor: (post = {}) => { App.state.editorInstance = new Quill('#editor', { theme: 'snow', modules: { toolbar: [[{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline'], ['link', 'image', 'code-block']] } }); if (post.content) App.state.editorInstance.root.innerHTML = post.content; },
-            handlePostFormSubmit: async (e) => { e.preventDefault(); const f=e.target, s=f.dataset.slug, isEdit=!!s, m=isEdit?'PUT':'POST', u=isEdit?`${App.config.workerUrl}/api/admin/posts/${s}`:`${App.config.workerUrl}/api/admin/posts`; const d={title:f.title.value, category:f.category.value, imageUrl:f.imageUrl.value, content:App.state.editorInstance.root.innerHTML, tags:(f.tags.value||'').split(',').map(t=>t.trim()).filter(Boolean), views:f.views.value, isPinned:f.isPinned.checked, date:isEdit?f.dataset.date:null}; try { const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json','Authorization':`Bearer ${App.state.authToken}`},body:JSON.stringify(d)}); if(r.ok) { alert('文章保存成功!'); App.router(); } else { throw new Error('保存失败');} } catch(err) { alert('文章保存失败。');} },
-            deletePost: async (slug) => { if (!confirm('确认删除?')) return; try {const r=await fetch(`${App.config.workerUrl}/api/admin/posts/${slug}`,{method:'DELETE',headers:{'Authorization':`Bearer ${App.state.authToken}`}}); if(r.ok) { alert('删除成功'); App.router(); } else throw new Error('删除失败');} catch(e){alert('删除失败');} },
-            addNavItemRow: () => { const c=document.getElementById('nav-item-list'), d=document.createElement('div'); d.className='nav-item-row grid grid-cols-12 gap-2 mb-2'; d.innerHTML=`<input type="text" name="label" placeholder="菜单项名称" class="col-span-5 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" placeholder="URL" class="col-span-4 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="icon" placeholder="Icon Class" class="col-span-2 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeNavItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded-md col-span-1">-</button>`; c.appendChild(d); },
-            removeNavItemRow: (btn) => btn.closest('.nav-item-row').remove(),
-            handleNavFormSubmit: async (e) => { e.preventDefault(); const rows=document.querySelectorAll('.nav-item-row'); const parse=()=>{const i=Array.from(rows).map(r=>({label:r.querySelector('[name=label]').value,url:r.querySelector('[name=url]').value,icon:r.querySelector('[name=icon]').value})),s=[{level:-1,children:[]}];for(const t of i){const l=t.label,d=l.match(/^\s*/)[0].length,v=Math.floor(d/2);t.label=l.trim();if(!t.label||!t.url)continue;while(v<=s[s.length-1].level)s.pop();const p=s[s.length-1];if(!p.children)p.children=[];p.children.push(t);s.push({level:v,...t})}return s[0].children}; try {const r=await fetch(`${App.config.workerUrl}/api/admin/nav`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${App.state.authToken}`},body:JSON.stringify(parse())});if(r.ok){alert('导航更新成功'); App.state.navItems=[]; App.router();}else throw new Error('更新失败');}catch(err){alert('更新失败');} },
-            addLinkItemRow: () => { const c=document.getElementById('link-item-list'), d=document.createElement('div'); d.className='link-item-row flex items-center gap-2 mb-2'; d.innerHTML=`<input type="text" name="name" placeholder="网站名称" class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" placeholder="URL" class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeLinkItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded-md">-</button>`; c.appendChild(d); },
-            removeLinkItemRow: (btn) => btn.closest('.link-item-row').remove(),
-            handleLinksFormSubmit: async (e) => { e.preventDefault(); const r=document.querySelectorAll('.link-item-row'), l=Array.from(r).map(i=>({name:i.querySelector('[name=name]').value,url:i.querySelector('[name=url]').value})).filter(i=>i.name&&i.url); try {const res=await fetch(`${App.config.workerUrl}/api/admin/links`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${App.state.authToken}`},body:JSON.stringify(l)});if(res.ok){alert('友链更新成功');App.state.friendlyLinks=[];App.router()}else throw new Error('更新失败');}catch(err){alert('更新失败');} },
-            deleteComment: async (id) => { if (!confirm('确认删除?')) return; try {const r=await fetch(`${App.config.workerUrl}/api/admin/comments/${id}`,{method:'DELETE',headers:{'Authorization':`Bearer ${App.state.authToken}`}}); if(r.ok){alert('删除成功'); App.state.recentComments=[]; App.router();} else throw new Error('删除失败');}catch(e){alert('删除失败');} },
-            handleStatsFormSubmit: async (e) => { e.preventDefault(); const f=e.target,d={posts_total:f.posts_total.value,categories_total:f.categories_total.value,comments_total:f.comments_total.value,contact_email:f.contact_email.value,contact_github:f.contact_github.value}; try { const r=await fetch(`${App.config.workerUrl}/api/admin/stats`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${App.state.authToken}`},body:JSON.stringify(d)}); if(r.ok){alert('统计数据更新成功!'); App.state.siteStats=null; App.router();}else throw new Error('保存失败');}catch(err){alert('统计数据保存失败。');} },
-            
+            initEditor: (post = {}) => {
+                const Size = Quill.import('attributors/style/size');
+                Size.whitelist = ['10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'];
+                Quill.register(Size, true);
+                const toolbarOptions = [
+                    [{ 'header': [1, 2, 3, false] }],
+                    [{ 'size': ['10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['link', 'image', 'code-block']
+                ];
+                App.state.editorInstance = new Quill('#editor', { theme: 'snow', modules: { toolbar: toolbarOptions } });
+                if (post.content) App.state.editorInstance.root.innerHTML = post.content;
+            },
+            handlePostFormSubmit: async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const slug = form.dataset.slug;
+                const isEditing = !!slug;
+                const method = isEditing ? 'PUT' : 'POST';
+                const url = isEditing ? `${App.config.workerUrl}/api/admin/posts/${slug}` : `${App.config.workerUrl}/api/admin/posts`;
+                const tags = (form.tags.value || '').split(',').map(tag => tag.trim()).filter(Boolean);
+                const postData = { title: form.title.value, category: form.category.value, imageUrl: form.imageUrl.value, content: App.state.editorInstance.root.innerHTML, tags, views: form.views.value, isPinned: form.isPinned.checked, date: isEditing ? form.dataset.date : null };
+                try {
+                    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(postData) });
+                    if (res.ok) { alert('文章保存成功!'); App.showView('posts'); } else throw new Error('保存失败');
+                } catch (error) { alert('文章保存失败。'); }
+            },
+            deletePost: async (slug) => {
+                if (!confirm('确认删除?')) return;
+                try {
+                    const res = await fetch(`${App.config.workerUrl}/api/admin/posts/${slug}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${App.state.authToken}` } });
+                    if (res.ok) { alert('删除成功'); App.showView('posts'); } else throw new Error('删除失败');
+                } catch (e) { alert('删除失败'); }
+            },
+            handleNavFormSubmit: async (e) => {
+                e.preventDefault();
+                const rows = document.querySelectorAll('.nav-item-row');
+                const parseNavItems = () => { const items = Array.from(rows).map(row => ({ label: row.querySelector('[name=label]').value, url: row.querySelector('[name=url]').value, icon: row.querySelector('[name=icon]').value, })); const result = []; const stack = [{ level: -1, children: result }]; for (const item of items) { const label = item.label; const indent = label.match(/^\s*/)[0].length; const level = Math.floor(indent / 2); item.label = label.trim(); if (!item.label || !item.url) continue; while (level <= stack[stack.length - 1].level) stack.pop(); const parent = stack[stack.length - 1]; if (!parent.children) parent.children = []; parent.children.push(item); stack.push({ level: level, ...item }); } return result; };
+                const newNavItems = parseNavItems();
+                try {
+                    const res = await fetch(`${App.config.workerUrl}/api/admin/nav`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(newNavItems) });
+                    if (res.ok) { alert('导航更新成功'); } else throw new Error('更新失败');
+                } catch (e) { alert('更新失败'); }
+            },
+            handleLinksFormSubmit: async (e) => {
+                e.preventDefault();
+                const rows = document.querySelectorAll('.link-item-row');
+                const newLinks = Array.from(rows).map(r => ({ name: r.querySelector('[name=name]').value, url: r.querySelector('[name=url]').value })).filter(i => i.name && i.url);
+                try {
+                    const res = await fetch(`${App.config.workerUrl}/api/admin/links`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(newLinks) });
+                    if (res.ok) alert('友链更新成功'); else throw new Error('更新失败');
+                } catch (e) { alert('更新失败'); }
+            },
+             handleStatsFormSubmit: async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const statsData = { posts_total: form.posts_total.value, categories_total: form.categories_total.value, comments_total: form.comments_total.value, contact_email: form.contact_email.value, contact_github: form.contact_github.value };
+                try {
+                    const res = await fetch(`${App.config.workerUrl}/api/admin/stats`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(statsData) });
+                    if (res.ok) alert('统计数据更新成功!'); else throw new Error('保存失败');
+                } catch (error) { alert('统计数据保存失败。'); }
+            },
+            deleteComment: async (commentId) => {
+                if (!confirm('确认删除这条评论吗?')) return;
+                try {
+                    const res = await fetch(`${App.config.workerUrl}/api/admin/comments/${commentId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${App.state.authToken}` } });
+                    if (res.ok) { alert('删除成功'); App.showView('comments'); } else throw new Error('删除失败');
+                } catch (e) { alert('删除失败'); }
+            },
+            addNavItemRow: () => { const container = document.getElementById('nav-item-list'); const div = document.createElement('div'); div.className = 'nav-item-row grid grid-cols-12 gap-2 mb-2'; div.innerHTML = `<input type="text" name="label" placeholder="菜单项名称" class="col-span-5 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" placeholder="URL" class="col-span-4 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"><input type="text" name="icon" placeholder="Icon SVG" class="col-span-2 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeNavItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded col-span-1">-</button>`; container.appendChild(div); },
+            removeNavItemRow: (button) => button.closest('.nav-item-row').remove(),
+            addLinkItemRow: () => { const container = document.getElementById('link-item-list'); const div = document.createElement('div'); div.className = 'link-item-row flex items-center gap-2 mb-2'; div.innerHTML = `<input type="text" name="name" placeholder="网站名称" class="flex-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" placeholder="URL" class="flex-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeLinkItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded">-</button>`; container.appendChild(div); },
+            removeLinkItemRow: (button) => button.closest('.link-item-row').remove(),
+
+            // --- Data Fetching ---
+            fetchDataIfNeeded: async (force = false) => { if (App.state.posts.length === 0 || force) try { const res = await fetch(`${App.config.workerUrl}/api/posts`); App.state.posts = await res.json(); } catch (e) {} },
+            fetchNavIfNeeded: async (force = false) => { if (App.state.navItems.length === 0 || force) try { const res = await fetch(`${App.config.workerUrl}/api/nav`); App.state.navItems = await res.json(); } catch (e) {} },
+            fetchFriendlyLinksIfNeeded: async (force = false) => { if (App.state.friendlyLinks.length === 0 || force) try { const res = await fetch(`${App.config.workerUrl}/api/links`); App.state.friendlyLinks = await res.json(); } catch (e) {} },
+            fetchRecentCommentsIfNeeded: async (force = false) => { if (App.state.recentComments.length === 0 || force) try { const res = await fetch(`${App.config.workerUrl}/api/comments/recent`); App.state.recentComments = await res.json(); } catch (e) {} },
+            fetchSiteStatsIfNeeded: async (force = false) => { if (!App.state.siteStats || force) try { const res = await fetch(`${App.config.workerUrl}/api/stats`); App.state.siteStats = await res.json(); } catch (e) {} },
+
+            // --- Templates ---
             templates: {
+                loader: () => `<div class="flex h-screen justify-center items-center"><div class="loader"></div></div>`,
                 loginPage: () => `<div class="min-h-screen flex items-center justify-center"><div class="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md"><h2 class="text-2xl font-bold text-center mb-6">管理员登录</h2><form onsubmit="App.handleLogin(event)"><div class="mb-4"><label for="username">用户名</label><input type="text" id="username" name="username" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-6"><label for="password">密码</label><input type="password" id="password" name="password" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded">登录</button></form></div></div>`,
-                adminDashboard: () => `<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><header class="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700 mb-8"><h1 class="text-2xl font-bold">管理后台</h1><div><a href="index.html" class="text-blue-500 hover:underline mr-4">返回博客</a><button onclick="App.handleLogout()" class="bg-red-500 text-white py-2 px-4 rounded">退出</button></div></header><div class="flex gap-8"><aside class="w-1/5"><ul class="space-y-2"><li><button onclick="App.showView('posts')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">文章管理</button></li><li><button onclick="App.showView('nav')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">导航设置</button></li><li><button onclick="App.showView('links')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">友链管理</button></li><li><button onclick="App.showView('comments')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">评论管理</button></li><li><button onclick="App.showView('settings')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">网站设置</button></li></ul></aside><main id="admin-content" class="w-4/5">${App.templates.postManager()}</main></div></div>`,
+                adminDashboard: () => `<div class="bg-white dark:bg-gray-900"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><header class="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700 mb-8"><h1 class="text-2xl font-bold">管理后台</h1><div><a href="index.html" class="text-blue-500 hover:underline mr-4">返回博客</a><button onclick="App.handleLogout()" class="bg-red-500 text-white py-2 px-4 rounded">退出</button></div></header><div class="flex gap-8"><aside class="w-1/5"><ul class="space-y-2"><li><button onclick="App.showView('posts')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">文章管理</button></li><li><button onclick="App.showView('nav')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">导航设置</button></li><li><button onclick="App.showView('links')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">友链管理</button></li><li><button onclick="App.showView('comments')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">评论管理</button></li><li><button onclick="App.showView('settings')" class="w-full text-left font-semibold p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">网站设置</button></li></ul></aside><main id="admin-content" class="w-4/5">${App.templates.postManager()}</main></div></div></div>`,
                 postManager: () => `<div class="w-full"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-semibold">文章列表</h2><button onclick="App.showView('editor')" class="bg-blue-500 text-white py-2 px-4 rounded-md">撰写新文章</button></div><div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"><thead><tr><th class="px-6 py-3 text-left">标题</th><th class="px-6 py-3 text-left">分类</th><th class="px-6 py-3 text-left">日期</th><th class="px-6 py-3 text-right">操作</th></tr></thead><tbody class="divide-y divide-gray-200 dark:divide-gray-700">${App.state.posts.map(p => `<tr><td class="px-6 py-4">${p.title}</td><td class="px-6 py-4">${p.category}</td><td class="px-6 py-4">${new Date(p.date).toLocaleDateString()}</td><td class="px-6 py-4 text-right"><button onclick="App.showView('editor', '${p.slug}')" class="text-indigo-600 dark:text-indigo-400">编辑</button><button onclick="App.deletePost('${p.slug}')" class="text-red-600 dark:text-red-400 ml-2">删除</button></td></tr>`).join('')}</tbody></table></div></div>`,
-                postEditor: (post = {}) => {
-                    const flattenNavItems = (items) => {
-                        let flat = [];
-                        items.forEach(item => {
-                            if (item.label) flat.push(item.label.trim());
-                            if (item.children) flat = flat.concat(flattenNavItems(item.children));
-                        });
-                        return flat;
-                    };
-                    const categoryOptions = [...new Set([...flattenNavItems(App.state.navItems), ...Object.keys(App.state.categories)])];
-                    return `<div class="w-full"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-semibold">${post.slug ? '编辑文章' : '撰写新文章'}</h2><button onclick="App.showView('posts')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">返回列表</button></div><form onsubmit="App.handlePostFormSubmit(event)" data-slug="${post.slug || ''}" data-date="${post.date || ''}" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-6"><div><label for="title" class="block text-sm font-medium">标题</label><input type="text" id="title" name="title" value="${post.title || ''}" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="category" class="block text-sm font-medium">分类</label><input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600" list="category-list"><datalist id="category-list">${categoryOptions.map(cat => `<option value="${cat}"></option>`).join('')}</datalist></div><div><label for="imageUrl" class="block text-sm font-medium">配图 URL</label><input type="url" id="imageUrl" name="imageUrl" value="${post.imageUrl || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="tags" class="block text-sm font-medium">标签 (用英文逗号,隔开)</label><input type="text" id="tags" name="tags" value="${(post.tags || []).join(', ')}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="flex items-center gap-4"><div><label for="views" class="block text-sm font-medium">浏览量</label><input type="number" id="views" name="views" value="${post.views || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mt-6 flex items-center"><input type="checkbox" id="isPinned" name="isPinned" class="h-4 w-4 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500" ${post.isPinned ? 'checked' : ''}><label for="isPinned" class="ml-2 text-sm font-medium">置顶</label></div></div></div><div><label class="block text-sm font-medium mb-1">内容</label><div id="editor"></div></div><div class="text-right"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存文章</button></div></form></div>`;
-                },
-                navEditor: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">导航菜单设置</h2><p class="text-sm text-gray-500 mb-4">提示: 在名称前添加空格来创建子菜单 (2个空格 = 1级缩进)。图标请使用 &lt;i&gt; 标签。</p><form onsubmit="App.handleNavFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"><div class="grid grid-cols-12 gap-2 mb-2 text-sm font-semibold"><div class="col-span-5">菜单项名称</div><div class="col-span-4">URL</div><div class="col-span-2">Icon Class</div></div><div id="nav-item-list" class="space-y-2 mb-4">${(App.state.navItems || []).map(item => `<div class="nav-item-row grid grid-cols-12 gap-2"><input type="text" name="label" value="${item.label}" class="col-span-5 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" value="${item.url}" class="col-span-4 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="icon" value="${item.icon || ''}" class="col-span-2 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeNavItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded-md col-span-1">-</button></div>`).join('')}</div><button type="button" onclick="App.addNavItemRow()" class="text-sm bg-gray-200 dark:bg-gray-700 py-2 px-4 rounded-md mb-4">+ 添加</button><div class="text-right border-t dark:border-gray-700 pt-4"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存</button></div></form></div>`,
+                postEditor: (post = {}) => `<div class="w-full"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-semibold">${post.slug ? '编辑文章' : '撰写新文章'}</h2><button onclick="App.showView('posts')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">返回列表</button></div><form onsubmit="App.handlePostFormSubmit(event)" data-slug="${post.slug || ''}" data-date="${post.date || ''}" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-6"><div><label for="title" class="block text-sm font-medium">标题</label><input type="text" id="title" name="title" value="${post.title || ''}" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="category" class="block text-sm font-medium">分类</label><input type="text" id="category" name="category" value="${post.category || ''}" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="imageUrl" class="block text-sm font-medium">配图 URL</label><input type="url" id="imageUrl" name="imageUrl" value="${post.imageUrl || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="tags" class="block text-sm font-medium">标签 (用英文逗号,隔开)</label><input type="text" id="tags" name="tags" value="${(post.tags || []).join(', ')}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="flex items-center gap-4"><div><label for="views" class="block text-sm font-medium">浏览量</label><input type="number" id="views" name="views" value="${post.views || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mt-6 flex items-center"><input type="checkbox" id="isPinned" name="isPinned" class="h-4 w-4 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500" ${post.isPinned ? 'checked' : ''}><label for="isPinned" class="ml-2 text-sm font-medium">置顶</label></div></div></div><div><label class="block text-sm font-medium mb-1">内容</label><div id="editor" class="bg-white dark:text-gray-800"></div></div><div class="text-right"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存文章</button></div></form></div>`,
+                navEditor: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">导航菜单设置</h2><p class="text-sm text-gray-500 mb-4">提示: 在名称前添加空格来创建子菜单 (2个空格 = 1级缩进)。图标请使用SVG代码。</p><form onsubmit="App.handleNavFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"><div class="grid grid-cols-12 gap-2 mb-2 text-sm font-semibold"><div class="col-span-5">菜单项名称</div><div class="col-span-4">URL</div><div class="col-span-2">Icon SVG</div></div><div id="nav-item-list" class="space-y-2 mb-4">${(App.state.navItems || []).map(item => `<div class="nav-item-row grid grid-cols-12 gap-2"><input type="text" name="label" value="${item.label}" class="col-span-5 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" value="${item.url}" class="col-span-4 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="icon" value="${item.icon || ''}" class="col-span-2 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeNavItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded-md col-span-1">-</button></div>`).join('')}</div><button type="button" onclick="App.addNavItemRow()" class="text-sm bg-gray-200 dark:bg-gray-700 py-2 px-4 rounded-md mb-4">+ 添加</button><div class="text-right border-t dark:border-gray-700 pt-4"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存</button></div></form></div>`,
                 friendlyLinksEditor: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">友情链接管理</h2><form onsubmit="App.handleLinksFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"><div id="link-item-list" class="space-y-2 mb-4">${(App.state.friendlyLinks || []).map(link => `<div class="link-item-row flex items-center gap-2"><input type="text" name="name" value="${link.name}" class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><input type="text" name="url" value="${link.url}" class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="button" onclick="App.removeLinkItemRow(this)" class="bg-red-500 text-white px-3 py-2 rounded-md">-</button></div>`).join('')}</div><button type="button" onclick="App.addLinkItemRow()" class="text-sm bg-gray-200 dark:bg-gray-700 py-2 px-4 rounded-md mb-4">+ 添加</button><div class="text-right border-t dark:border-gray-700 pt-4"><button type="submit" class="bg-green-500 text-white py-2 px-4 rounded-md">保存</button></div></form></div>`,
-                commentsManager: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">评论管理</h2><div class="bg-white dark:bg-gray-800 shadow rounded-lg"><ul class="divide-y dark:divide-gray-700">${(App.state.recentComments || []).map(c => `<li class="p-4"><div class="flex justify-between items-start"><div class="text-sm"><p class="mb-1"><span class="font-bold">${c.nickname}</span> 评论了文章 <a href="index.html#/post/${c.slug}" class="text-blue-500">${c.postTitle}</a></p><p class="bg-gray-100 dark:bg-gray-700 p-2 rounded-md">${c.content}</p></div><button onclick="App.deleteComment('${c.id}')" class="text-red-500 hover:underline text-sm">删除</button></div></li>`).join('')}</ul></div></div>`,
-                siteSettingsEditor: () => { const stats = App.state.siteStats || {}; return `<div class="w-full"><h2 class="text-xl font-semibold mb-6">网站设置</h2><form onsubmit="App.handleStatsFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4"><h3 class="text-lg font-medium">联系方式</h3><div><label for="contact_email">联系邮箱</label><input name="contact_email" value="${stats.contact_email||''}"></div><div><label for="contact_github">GitHub</label><input name="contact_github" value="${stats.contact_github||''}"></div><h3 class="text-lg font-medium pt-4 border-t dark:border-gray-700">统计基数</h3><p class="text-sm text-gray-500">这里设置的值将作为统计的基数。</p><div><label>文章总数: <input name="posts_total" value="${stats.posts_total||0}"></label></div><div><label>分类总数: <input name="categories_total" value="${stats.categories_total||0}"></label></div><div><label>评论总数: <input name="comments_total" value="${stats.comments_total||0}"></label></div><button type="submit">保存</button></form></div>`;}
+                commentsManager: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">评论管理</h2><div class="bg-white dark:bg-gray-800 shadow rounded-lg"><ul class="divide-y dark:divide-gray-700">${(App.state.recentComments || []).map(c => `<li class="p-4"><div class="flex justify-between items-start"><div class="text-sm"><p class="mb-1"><span class="font-bold">${c.nickname}</span> 评论了文章 <a href="index.html#/post/${c.slug}" target="_blank" class="text-blue-500">${c.postTitle}</a></p><p class="bg-gray-100 dark:bg-gray-700 p-2 rounded">${c.content}</p></div><button onclick="App.deleteComment('${c.id}')" class="text-red-500 hover:underline text-sm">删除</button></div></li>`).join('')}</ul></div></div>`,
+                siteSettingsEditor: () => { const stats = App.state.siteStats || {}; return `<div class="w-full"><h2 class="text-xl font-semibold mb-6">网站设置</h2><form onsubmit="App.handleStatsFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4"><h3 class="text-lg font-medium">联系方式</h3><div><label for="contact_email" class="block text-sm font-medium">联系邮箱</label><input type="email" id="contact_email" name="contact_email" value="${stats.contact_email || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="contact_github" class="block text-sm font-medium">GitHub 地址</label><input type="url" id="contact_github" name="contact_github" value="${stats.contact_github || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><h3 class="text-lg font-medium pt-4 border-t dark:border-gray-700">网站统计基数</h3><p class="text-sm text-gray-500">这里设置的值将作为统计的基数。</p><div><label for="posts_total" class="block text-sm font-medium">文章总数</label><input type="number" id="posts_total" name="posts_total" value="${stats.posts_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="categories_total" class="block text-sm font-medium">分类总数</label><input type="number" id="categories_total" name="categories_total" value="${stats.categories_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="comments_total" class="block text-sm font-medium">评论总数</label><input type="number" id="comments_total" name="comments_total" value="${stats.comments_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="text-right border-t dark:border-gray-700 pt-4"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存设置</button></div></form></div>`;}
             }
         };
         
