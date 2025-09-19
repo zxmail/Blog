@@ -58,7 +58,7 @@
             router: async () => {
                 const appContainer = document.getElementById('app');
                 if (App.state.authToken) {
-                    appContainer.innerHTML = App.templates.loader();
+                    // appContainer.innerHTML = App.templates.loader(); // <-- 已移除加载动画
                     await Promise.all([
                         App.fetchDataIfNeeded(),
                         App.fetchNavIfNeeded(),
