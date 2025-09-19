@@ -20,6 +20,9 @@
         .dark .dark\:border-gray-700 { border-color: rgb(55 65 81 / 1) !important; }
         body { background-color: #f5f5f5; }
         .dark body { background-color: #111827; }
+        /* Helper style for icon explorer */
+        .icon-grid i { color: #606266; }
+        .dark .icon-grid i { color: #9ca3af; }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -241,21 +244,23 @@
                     <div class="w-full">
                         <h2 class="text-xl font-semibold mb-6">图标列表 (Font Awesome 5 Pro)</h2>
                         <p class="text-sm text-gray-500 mb-4">
-                            点击图标即可复制其CSS类名。代码已自动处理品牌和通用图标的显示问题。
+                            下方列出了每个图标名称可用的所有样式。点击基础类名可直接复制。
                         </p>
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow" style="max-height: 70vh; overflow-y: auto;">
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 ${icons.map(iconName => {
                                     const classToCopy = `fa-${iconName}`;
                                     return `
-                                    <div class="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" 
-                                         onclick="navigator.clipboard.writeText('${classToCopy}')" 
-                                         title="点击复制: ${classToCopy}">
-                                        <span class="fa-stack fa-fw w-6 mr-3 text-lg text-center">
-                                            <i class="fas ${classToCopy}"></i>
-                                            <i class="fab ${classToCopy}"></i>
-                                        </span>
-                                        <span class="text-sm">${classToCopy}</span>
+                                    <div class="p-3 border dark:border-gray-700 rounded-md">
+                                        <p class="text-sm font-mono cursor-pointer hover:text-blue-500" onclick="navigator.clipboard.writeText('${classToCopy}')" title="点击复制: ${classToCopy}">
+                                            ${classToCopy}
+                                        </p>
+                                        <div class="flex items-center justify-around mt-2 text-2xl text-center icon-grid">
+                                            <i class="fas ${classToCopy} fa-fw" title="fas ${classToCopy}"></i>
+                                            <i class="far ${classToCopy} fa-fw" title="far ${classToCopy}"></i>
+                                            <i class="fal ${classToCopy} fa-fw" title="fal ${classToCopy}"></i>
+                                            <i class="fab ${classToCopy} fa-fw" title="fab ${classToCopy}"></i>
+                                        </div>
                                     </div>
                                     `
                                 }).join('')}
