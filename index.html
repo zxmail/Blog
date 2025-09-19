@@ -138,7 +138,7 @@
             
             router: async () => {
                 const appContainer = document.getElementById('app');
-                appContainer.innerHTML = App.templates.loader();
+                // appContainer.innerHTML = App.templates.loader(); // <-- 已移除加载动画
 
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
