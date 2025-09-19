@@ -289,7 +289,34 @@
                     });
                 }
             },
-            initEditor: (post = {}) => { /* ... no changes ... */ },
+            
+            initEditor: (post = {}) => {
+                // Register custom font sizes with Quill
+                const Size = Quill.import('attributors/style/size');
+                Size.whitelist = ['10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'];
+                Quill.register(Size, true);
+
+                // Define the toolbar with new options
+                const toolbarOptions = [
+                    [{ 'header': [1, 2, 3, false] }],
+                    [{ 'size': ['10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['link', 'image', 'code-block']
+                ];
+
+                App.state.editorInstance = new Quill('#editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: toolbarOptions
+                    }
+                });
+
+                if (post.content) {
+                    App.state.editorInstance.root.innerHTML = post.content;
+                }
+            },
+
             handlePostFormSubmit: async (event) => { /* ... no changes ... */ },
             deletePost: async (slug) => { /* ... no changes ... */ },
             
@@ -686,7 +713,6 @@
         App.fetchSinglePost = async (slug) => { try { const response = await fetch(`${App.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { console.error("Fetch single post error:", error); return null; } };
         App.handleLogin = async (e) => { e.preventDefault(); const { username, password } = e.target; try { const res = await fetch(`${App.config.workerUrl}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.value, password: password.value }) }); const data = await res.json(); if (data.success) { App.state.authToken = data.token; localStorage.setItem('authToken', data.token); window.location.hash = '/admin/dashboard'; } else { alert('登录失败'); } } catch (err) { alert('登录出错'); } };
         App.handleLogout = () => { App.state.authToken = null; localStorage.removeItem('authToken'); window.location.hash = '/admin'; };
-        App.initEditor = (post = {}) => { App.state.editorInstance = new Quill('#editor', { theme: 'snow', modules: { toolbar: [[{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline'], ['link', 'image', 'code-block']] } }); if (post.content) App.state.editorInstance.root.innerHTML = post.content; };
         App.handlePostFormSubmit = async (e) => { e.preventDefault(); const form = e.target; const slug = form.dataset.slug; const isEditing = !!slug; const method = isEditing ? 'PUT' : 'POST'; const url = isEditing ? `${App.config.workerUrl}/api/admin/posts/${slug}` : `${App.config.workerUrl}/api/admin/posts`; const tagsString = form.tags.value || ''; const tags = tagsString.split(',').map(tag => tag.trim()).filter(Boolean); const postData = { title: form.title.value, category: form.category.value, imageUrl: form.imageUrl.value, content: App.state.editorInstance.root.innerHTML, tags: tags, views: form.views.value, isPinned: form.isPinned.checked, date: isEditing ? form.dataset.date : null }; try { const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${App.state.authToken}` }, body: JSON.stringify(postData) }); if (res.ok) { alert('文章保存成功!'); App.state.posts = []; App.state.tags = []; App.state.siteStats = null; window.location.hash = '/admin/dashboard'; } else { throw new Error('保存失败'); } } catch (error) { console.error('Error saving post:', error); alert('文章保存失败。'); } };
         App.deletePost = async (slug) => { if (!confirm('确认删除?')) return; try { const res = await fetch(`${App.config.workerUrl}/api/admin/posts/${slug}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${App.state.authToken}` } }); if (res.ok) { alert('删除成功'); App.state.posts = []; App.state.siteStats = null; App.router(); } else throw new Error('删除失败'); } catch (e) { alert('删除失败'); } };
         App.removeNavItemRow = (button) => { button.closest('.nav-item-row').remove(); };
