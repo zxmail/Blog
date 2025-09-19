@@ -10,6 +10,10 @@
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+
     <script>
         // Tailwind CSS Dark Mode Config
         tailwind.config = {
@@ -29,8 +33,31 @@
         .content-area ul, .content-area ol { padding-left: 2em; margin-bottom: 1em; }
         .content-area blockquote { border-left: 4px solid #e5e7eb; padding-left: 1em; margin-left: 0; color: #6b7280; }
         .dark .content-area blockquote { border-color: #4b5563; color: #9ca3af; }
-        .content-area pre { background-color: #f3f4f6; padding: 1em; border-radius: 0.5rem; overflow-x: auto; color: #1f2937; }
-        .dark .content-area pre { background-color: #1f2937; color: #d1d5db; }
+        
+        /* Removed default styles for 'pre' to let highlight.js take over */
+        .content-area pre {
+            border-radius: 0.5rem;
+            padding: 1em;
+        }
+
+        /* Styles for highlight.js line numbers */
+        .hljs-ln-numbers {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            text-align: right;
+            color: #999;
+            vertical-align: top;
+            padding-right: 10px !important;
+            border-right: 1px solid #999;
+        }
+        .hljs-ln-code {
+            padding-left: 10px !important;
+        }
+
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         .dark .loader { border-color: #4b5563; border-top-color: #60a5fa;}
         #back-to-top { position: fixed; bottom: 2rem; right: 2rem; display: none; }
@@ -209,6 +236,15 @@
                         else App.state.posts.unshift(post);
                     }
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.postPage(post));
+                    
+                    // Add this block to apply highlighting after the post page is rendered
+                    setTimeout(() => {
+                        document.querySelectorAll('pre code').forEach((block) => {
+                            hljs.highlightElement(block);
+                            hljs.lineNumbersBlock(block);
+                        });
+                    }, 0);
+
                 } else if (parts[1] === 'search' && parts[2]) {
                     const query = decodeURIComponent(parts[2]);
                     const results = await App.fetchSearchResults(query);
@@ -378,11 +414,16 @@
             },
             
             initEditor: (post = {}) => {
+                // Whitelist of font sizes
+                const Size = Quill.import('attributors/style/size');
+                Size.whitelist = ['12px', '14px', '16px', '18px', '20px', '24px', '36px'];
+                Quill.register(Size, true);
+
                 App.state.editorInstance = new Quill('#editor', {
                     theme: 'snow',
                     modules: {
                         toolbar: [
-                            [{ 'header': [1, 2, 3, false] }, { 'size': ['small', false, 'large', 'huge'] }],
+                            [{ 'header': [1, 2, 3, false] }, { 'size': Size.whitelist }],
                             ['bold', 'italic', 'underline', 'strike'],
                             [{ 'color': [] }, { 'background': [] }],
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }],
