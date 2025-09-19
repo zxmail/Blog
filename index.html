@@ -18,7 +18,12 @@
         html { scroll-behavior: smooth; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .ql-editor { min-height: 250px; font-size: 16px; line-height: 1.7; }
-        .content-area { font-size: 16px; line-height: 1.7; }
+        
+        /* --- MODIFIED RULES START --- */
+        .content-area { font-size: 15px; line-height: 1.7; color: #606266; }
+        .dark .content-area { color: #d1d5db; } /* For dark mode readability */
+        /* --- MODIFIED RULES END --- */
+
         .content-area a { color: #3b82f6; text-decoration: underline; }
         .dark .content-area a { color: #60a5fa; }
         .content-area h1, .content-area h2, .content-area h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; border: none; padding: 0;}
