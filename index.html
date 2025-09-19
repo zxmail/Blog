@@ -178,20 +178,35 @@
 
             router: async () => {
                 const appContainer = document.getElementById('app');
-                appContainer.innerHTML = App.templates.loader();
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
-                
-                await Promise.all([ App.fetchNavIfNeeded(), App.fetchTagsIfNeeded(), App.fetchFriendlyLinksIfNeeded(), App.fetchRecentCommentsIfNeeded(), App.fetchSiteStatsIfNeeded() ]);
-                await App.fetchDataIfNeeded();
 
+                // For admin pages, show full loader. For front-end, show layout skeleton instantly.
+                if (path.startsWith('/admin')) {
+                    appContainer.innerHTML = App.templates.loader();
+                } else {
+                    appContainer.innerHTML = App.templates.mainLayout(App.templates.loader());
+                }
+                
+                // Fetch common data for the layout (header, sidebar, footer)
+                await Promise.all([ 
+                    App.fetchNavIfNeeded(), 
+                    App.fetchTagsIfNeeded(), 
+                    App.fetchFriendlyLinksIfNeeded(), 
+                    App.fetchRecentCommentsIfNeeded(), 
+                    App.fetchSiteStatsIfNeeded() 
+                ]);
+
+                // Route to the specific page and fetch its content
                 if (path === '/') {
+                    await App.fetchDataIfNeeded(); // Fetch all posts for homepage
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(App.state.posts));
                     App.initCarousel();
                 } else if (parts[1] === 'post' && parts[2]) {
                     const slug = parts[2];
                     const post = await App.fetchSinglePost(slug);
                     await App.fetchCommentsForPost(slug);
+                    // No need to fetch all posts, sidebar data is already loaded.
                     if (post) {
                         const postIndex = App.state.posts.findIndex(p => p.slug === slug);
                         if (postIndex > -1) App.state.posts[postIndex] = post;
@@ -216,21 +231,27 @@
                     const results = await App.fetchSearchResults(query);
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(results, `搜索结果: "${query}"`));
                     App.initCarousel();
-                } else if (parts[1] === 'category' && parts.length > 2) {
-                    const categoryName = parts.slice(2).map(decodeURIComponent).join('/');
-                    const filteredPosts = App.state.posts.filter(p => p.category && p.category.startsWith(categoryName));
-                    appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(filteredPosts, `分类: ${categoryName}`));
-                    App.initCarousel();
-                } else if (parts[1] === 'tag' && parts[2]) {
-                    const tagName = decodeURIComponent(parts[2]);
-                    const filteredPosts = App.state.posts.filter(p => p.tags && p.tags.includes(tagName));
-                    appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(filteredPosts, `标签: ${tagName}`));
+                } else if (parts[1] === 'category' || (parts[1] === 'tag' && parts[2])) {
+                    await App.fetchDataIfNeeded(); // Fetch all posts to filter them
+                    let filteredPosts;
+                    let title;
+                    if (parts[1] === 'category') {
+                        const categoryName = parts.slice(2).map(decodeURIComponent).join('/');
+                        filteredPosts = App.state.posts.filter(p => p.category && p.category.startsWith(categoryName));
+                        title = `分类: ${categoryName}`;
+                    } else {
+                        const tagName = decodeURIComponent(parts[2]);
+                        filteredPosts = App.state.posts.filter(p => p.tags && p.tags.includes(tagName));
+                        title = `标签: ${tagName}`;
+                    }
+                    appContainer.innerHTML = App.templates.mainLayout(App.templates.homePage(filteredPosts, title));
                     App.initCarousel();
                 } else if (path === '/admin') {
                     if (App.state.authToken) window.location.hash = '/admin/dashboard';
                     else appContainer.innerHTML = App.templates.loginPage();
                 } else if (path === '/admin/dashboard') {
                     if (!App.state.authToken) { window.location.hash = '/admin'; return; }
+                    await App.fetchDataIfNeeded(); // Fetch posts for the admin dashboard
                     appContainer.innerHTML = App.templates.adminDashboard();
                 } else {
                     appContainer.innerHTML = App.templates.mainLayout(App.templates.notFoundPage());
@@ -330,7 +351,7 @@
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8 flex flex-col lg:flex-row gap-[23px]"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 carousel: () => { const images = ['https://placehold.co/1200x230/3b82f6/ffffff?text=Carousel+Image+1', 'https://placehold.co/1200x230/ef4444/ffffff?text=Carousel+Image+2', 'https://placehold.co/1200x230/22c55e/ffffff?text=Carousel+Image+3']; return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg group">${images.map((src, index) => `<div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${index === 0 ? 'opacity-100' : 'opacity-0'}"><img src="${src}" class="w-full h-full object-cover" alt="Carousel Image ${index + 1}"></div>`).join('')}<button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${images.map((_, index) => `<button class="carousel-dot h-3 w-3 rounded-full transition-colors ${index === 0 ? 'bg-white' : 'bg-white/50'}" data-slide-to="${index}"></button>`).join('')}</div></div>`; },
                 homePage: (posts, title = "最新文章") => { return `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`; },
-                postCard: (post) => `<div class="p-6 flex flex-col sm:flex-row items-center"><div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0"><a href="#/post/${post.slug}" class="block"><img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-48 sm:h-full object-cover rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';"></a><a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a></div><div class="pt-5 sm:pt-0 sm:pl-5 flex flex-grow flex flex-col justify-between self-stretch"><div><h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2><div class="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div></div><div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-2"><span>${new Date(post.date).toLocaleDateString()}</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div></div></div>`,
+                postCard: (post) => `<div class="p-6 flex flex-col sm:flex-row items-center"><div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0"><a href="#/post/${post.slug}" class="block"><img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-48 sm:h-full object-cover rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';"></a><a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a></div><div class="pt-5 sm:pt-0 sm:pl-5 flex-grow flex flex-col justify-between self-stretch"><div><h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2><div class="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div></div><div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-2"><span>${new Date(post.date).toLocaleDateString()}</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div></div></div>`,
                 postPage: (post) => { if (!post) return App.templates.notFoundPage(); const postIndex = App.state.posts.findIndex(p => p.slug === post.slug); const prevPost = App.state.posts[postIndex + 1]; const nextPost = App.state.posts[postIndex - 1]; const commentsHtml = App.templates.commentsSection(post.slug); const commentFormHtml = App.templates.commentForm(post.slug); const postNavigationHtml = `<div class="mt-8 flex justify-between gap-2 sm:gap-4 text-white">${prevPost ? `<a href="#/post/${prevPost.slug}" class="relative w-1/2 h-20 rounded-md overflow-hidden block group"><img src="${prevPost.imageUrl || 'https://placehold.co/400x96/7f9cf5/ffffff?text=Prev'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${prevPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Prev';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center"><span class="text-xs font-light"><< 上一篇</span><span class="font-semibold mt-1 text-sm truncate">${prevPost.title}</span></div></a>` : '<div class="w-1/2"></div>'}${nextPost ? `<a href="#/post/${nextPost.slug}" class="relative w-1/2 h-20 rounded-md overflow-hidden block group"><img src="${nextPost.imageUrl || 'https://placehold.co/400x96/7f9cf5/ffffff?text=Next'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${nextPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Next';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center text-right"><span class="text-xs font-light">下一篇 >></span><span class="font-semibold mt-1 text-sm truncate">${nextPost.title}</span></div></a>` : '<div class="w-1/2"></div>'}</div>`; return `<article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="mb-4 text-sm text-gray-500 dark:text-gray-400"><a href="#" class="hover:text-blue-500">首页</a><span class="mx-1 sm:mx-2">></span><a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a><span class="mx-1 sm:mx-2">></span><span>正文</span></div><div class="text-center border-b dark:border-gray-700 pb-5 mb-6"><h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">${post.title}</h1><div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-3 space-x-2 sm:space-x-4"><span>${new Date(post.date).toLocaleDateString().replace(/\//g, '-')}</span><span>分类: <a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a></span><span>阅读(${post.views || 0})</span><span>评论(${App.state.comments[post.slug]?.length || 0})</span></div></div>${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">` : ''}<div class="content-area">${post.content}</div><div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap items-center gap-2">${(post.tags && post.tags.length > 0) ? '<span class="font-semibold text-sm">标签:</span>' : ''}${(post.tags || []).map(tag => `<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div>${postNavigationHtml}</article>${commentsHtml}${commentFormHtml}`; },
                 commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname" class="block text-sm font-medium mb-1">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content" class="block text-sm font-medium mb-1">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
                 commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return ` <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"> <h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3> <div class="space-y-6"> ${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'} </div> </div> `; },
