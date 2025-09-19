@@ -180,7 +180,13 @@
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
                 
-                await Promise.all([ App.fetchNavIfNeeded(), App.fetchTagsIfNeeded(), App.fetchFriendlyLinksIfNeeded(), App.fetchRecentCommentsIfNeeded(), App.fetchSiteStatsIfNeeded() ]);
+                await Promise.all([
+                    App.fetchNavIfNeeded(),
+                    App.fetchTagsIfNeeded(),
+                    App.fetchFriendlyLinksIfNeeded(),
+                    App.fetchRecentCommentsIfNeeded(),
+                    App.fetchSiteStatsIfNeeded() // <-- This line has been corrected (s in Stats is now capitalized)
+                ]);
                 await App.fetchDataIfNeeded();
 
                 if (path === '/') {
@@ -241,6 +247,7 @@
             fetchRecentCommentsIfNeeded: async (forceRefresh = false) => { if (App.state.recentComments.length === 0 || forceRefresh) { try { const res = await fetch(`${App.config.workerUrl}/api/comments/recent`); App.state.recentComments = await res.json(); } catch (e) { console.error("Fetch recent comments error:", e); } } },
             fetchCommentsForPost: async (slug) => { try { const res = await fetch(`${App.config.workerUrl}/api/comments/${slug}`); App.state.comments[slug] = await res.json(); } catch (e) { console.error(`Fetch comments for ${slug} error:`, e); App.state.comments[slug] = []; } },
             fetchSinglePost: async (slug) => { try { const response = await fetch(`${App.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { console.error("Fetch single post error:", error); return null; } },
+            fetchSiteStatsIfNeeded: async (forceRefresh = false) => { if (!App.state.siteStats || forceRefresh) { try { const res = await fetch(`${App.config.workerUrl}/api/stats`); App.state.siteStats = await res.json(); } catch (e) { console.error("Fetch stats error:", e); } } },
             fetchSearchResults: async (query) => { try { const res = await fetch(`${App.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { console.error("Search error:", e); return []; } },
             handleLogin: async (e) => { e.preventDefault(); const { username, password } = e.target; try { const res = await fetch(`${App.config.workerUrl}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.value, password: password.value }) }); const data = await res.json(); if (data.success) { App.state.authToken = data.token; localStorage.setItem('authToken', data.token); window.location.hash = '/admin/dashboard'; } else { alert('登录失败'); } } catch (err) { alert('登录出错'); } },
             handleLogout: () => { App.state.authToken = null; localStorage.removeItem('authToken'); window.location.hash = '/admin'; },
