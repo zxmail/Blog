@@ -29,6 +29,7 @@
         #back-to-top { position: fixed; bottom: 2rem; right: 2rem; display: none; }
         .group .dropdown-menu { display: none; }
         .group:hover .dropdown-menu { display: block; }
+        #carousel-slide-container.sliding { transition: transform 0.5s ease-in-out; }
         body { background-color: #f5f5f5; }
         .dark body { background-color: #111827; }
     </style>
@@ -98,7 +99,6 @@
                 let currentSlide = 1;
                 let isTransitioning = false;
 
-                // --- Seamless Loop Logic for 'slide' mode ---
                 if (data.mode === 'slide' && totalSlidesOriginal > 1) {
                     const slides = slideContainer.querySelectorAll('.carousel-slide');
                     const firstClone = slides[0].cloneNode(true);
@@ -119,7 +119,7 @@
                 };
 
                 const showSlide = (index, animate = true) => {
-                    if (isTransitioning) return;
+                    if (isTransitioning && data.mode === 'slide') return;
                     isTransitioning = true;
                     
                     if (data.mode === 'fade') {
@@ -152,38 +152,35 @@
                         }
                         isTransitioning = false;
                     });
+                } else {
+                    isTransitioning = false;
                 }
 
-
                 const nextSlide = () => {
-                    if (isTransitioning) return;
+                    if (isTransitioning && data.mode === 'slide') return;
                     if (data.mode === 'fade') {
-                        showSlide((currentSlide + 1) % totalSlidesOriginal);
+                        let nextIndex = (currentSlide + 1) % totalSlidesOriginal;
+                        showSlide(nextIndex);
                     } else {
                         showSlide(currentSlide + 1);
                     }
                 };
 
                 const prevSlide = () => {
-                    if (isTransitioning) return;
+                    if (isTransitioning && data.mode === 'slide') return;
                      if (data.mode === 'fade') {
-                        showSlide((currentSlide - 1 + totalSlidesOriginal) % totalSlidesOriginal);
+                        let prevIndex = (currentSlide - 1 + totalSlidesOriginal) % totalSlidesOriginal;
+                        showSlide(prevIndex);
                     } else {
                         showSlide(currentSlide - 1);
                     }
                 };
-                
-                if (data.mode !== 'fade') isTransitioning = false; // Initial ready state for slide mode
 
                 document.getElementById('carousel-prev')?.addEventListener('click', prevSlide);
                 document.getElementById('carousel-next')?.addEventListener('click', nextSlide);
                 dots.forEach(dot => dot.addEventListener('click', (e) => {
                     const slideIndex = parseInt(e.target.dataset.slideTo);
-                    if (data.mode === 'fade') {
-                         showSlide(slideIndex);
-                    } else {
-                         showSlide(slideIndex + 1);
-                    }
+                    showSlide(data.mode === 'fade' ? slideIndex : slideIndex + 1);
                 }));
                 
                 this.state.carouselInterval = setInterval(nextSlide, 5000);
@@ -257,6 +254,7 @@
             async fetchSearchResults(query) { try { const res = await fetch(`${this.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { return []; } },
             async fetchCarouselDataIfNeeded() { if (!this.state.carouselData) try { const res = await fetch(`${this.config.workerUrl}/api/carousel`); this.state.carouselData = await res.json(); } catch (e) {} },
             handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
+
             templates: {
                 header: () => {
                     const renderSubMenuItems = (items) => `<ul class="list-none">${items.map(item => `<li class="relative group/sub"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${(item.children||[]).length>0?'<i class="fas fa-chevron-right text-xs"></i>':''}</a>${(item.children||[]).length>0?`<div class="absolute left-full top-0 hidden group-hover/sub:block bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-48 border dark:border-gray-700">${renderSubMenuItems(item.children)}</div>`:''}</li>`).join('')}</ul>`;
@@ -264,6 +262,10 @@
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
                     return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><i class="fas fa-cat text-2xl"></i><span>夏商记</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`;
                 },
+                sidebar: () => `<aside class="w-full lg:w-1/4 space-y-2"><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div><p class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</p><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></div></a></li>`).join('')}</ul></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div></aside>`,
+                footer: () => { const stats = App.state.siteStats || {}; return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div></div></footer>`; },
+                friendlyLinksSection: () => { if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return ''; return `<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`; },
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8 flex flex-col lg:flex-row gap-[23px]"><div class="w-full lg:w-3/4">${content}</div>${App.templates.sidebar()}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const isSlideMode = data.mode === 'slide'; const slidesHtml = data.slides.map((slide, index) => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover" alt="Carousel Image ${index + 1}">`; const linkWrapper = (content) => slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${content}</a>` : content; if (isSlideMode) { return `<div class="carousel-slide w-full h-full flex-shrink-0">${linkWrapper(slideContent)}</div>`; } else { return `<div class="carousel-slide absolute w-full h-full transition-opacity duration-700 ease-in-out ${index === 0 ? 'opacity-100' : 'opacity-0'}">${linkWrapper(slideContent)}</div>`; } }).join(''); return `<div id="carousel-container" class="relative w-full h-[230px] overflow-hidden rounded-lg shadow-lg group"><div id="carousel-slide-container" class="${isSlideMode ? 'flex w-full h-full' : ''}">${slidesHtml}</div><button id="carousel-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300"><i class="fas fa-chevron-left"></i></button><button id="carousel-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black/30 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/50 transition-opacity opacity-0 group-hover:opacity-100 duration-300"><i class="fas fa-chevron-right"></i></button><div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">${data.slides.map((_, index) => `<button class="carousel-dot h-3 w-3 rounded-full transition-colors ${index === 0 ? 'bg-white' : 'bg-white/50'}" data-slide-to="${index}"></button>`).join('')}</div></div>`; },
                 homePage: (posts, title = "最新文章") => `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`,
                 postCard: (post) => `<div class="p-6 flex flex-col sm:flex-row items-center"><div class="relative w-full sm:w-2/5 lg:w-1/3 flex-shrink-0"><a href="#/post/${post.slug}" class="block"><img src="${post.imageUrl||'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-48 sm:h-full object-cover rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';"></a><a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a></div><div class="pt-5 sm:pt-0 sm:pl-5 flex-grow flex flex-col justify-between self-stretch"><div><h2 class="text-xl font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</a></h2><div class="text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content,100)}</div></div><div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-2"><span>${new Date(post.date).toLocaleDateString()}</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views||0}</span></div></div></div></div>`,
