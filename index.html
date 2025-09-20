@@ -147,7 +147,7 @@
                                         <span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>
                                         ${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}
                                     </a>
-                                    ${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-48 border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
+                                    ${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
                                 </li>`;
                         }).join('')}</ul>`;
                     };
@@ -159,7 +159,7 @@
                                 <span>${item.label}</span>
                                 ${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}
                             </a>
-                            ${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md mt-1 py-1 z-20 w-48 border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
+                            ${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md mt-1 py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
                         </div>`;
                     }).join('')}</nav>`;
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
