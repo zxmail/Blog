@@ -151,39 +151,74 @@
             initEditor(post = {}) { const Size = Quill.import('attributors/style/size'); Size.whitelist = ['10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '32px']; Quill.register(Size, true); const toolbarOptions = [[{ 'header': [1, 2, 3, false] }], [{ 'size': Size.whitelist }], ['bold', 'italic', 'underline'], [{ 'color': [] }, { 'background': [] }], ['link', 'image', 'code-block']]; this.state.editorInstance = new Quill('#editor', { theme: 'snow', modules: { toolbar: toolbarOptions } }); if (post.content) this.state.editorInstance.root.innerHTML = post.content; },
             async handlePostFormSubmit(e) { e.preventDefault(); const form = e.target; const slug = form.dataset.slug; const isEditing = !!slug; const method = isEditing ? 'PUT' : 'POST'; const url = isEditing ? `${this.config.workerUrl}/api/admin/posts/${slug}` : `${this.config.workerUrl}/api/admin/posts`; const tags = (form.tags.value || '').split(',').map(tag => tag.trim()).filter(Boolean); const postData = { title: form.title.value, category: form.category.value, imageUrl: form.imageUrl.value, content: this.state.editorInstance.root.innerHTML, tags, views: form.views.value, isPinned: form.isPinned.checked, date: isEditing ? form.dataset.date : null }; try { const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(postData) }); if (res.ok) { alert('文章保存成功!'); this.showView('posts'); } else throw new Error('保存失败'); } catch (error) { alert('文章保存失败。'); } },
             async deletePost(slug) { if (!confirm('确认删除?')) return; try { const res = await fetch(`${this.config.workerUrl}/api/admin/posts/${slug}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${this.state.authToken}` } }); if (res.ok) { alert('删除成功'); this.showView('posts'); } else throw new Error('删除失败'); } catch (e) { alert('删除失败'); } },
+            
+            // --- FUNCTION WITH BUG FIX ---
             async handleNavFormSubmit(e) {
                 e.preventDefault();
                 const rows = document.querySelectorAll('.nav-item-row');
+                
                 const parseNavItems = () => {
                     const items = Array.from(rows).map(row => ({
                         label: row.querySelector('[name=label]').value,
                         url: row.querySelector('[name=url]').value,
                         icon: row.querySelector('[name=icon_class]').value,
                     }));
+                    
                     const result = [];
+                    // The stack now holds references to the actual nodes in the result tree
                     const stack = [{ level: -1, children: result }];
+
                     for (const item of items) {
                         const label = item.label;
                         const indentMatch = label.match(/^-*/);
                         const indent = indentMatch ? indentMatch[0].length : 0;
                         const level = Math.floor(indent / 2);
                         item.label = label.replace(/^-*/, '');
+
                         if (!item.label && !item.url) continue;
+
                         while (level <= stack[stack.length - 1].level) {
                             stack.pop();
                         }
-                        const parent = stack[stack.length - 1];
-                        if (!parent.children) parent.children = [];
-                        parent.children.push(item);
-                        stack.push({ level, ...item });
+
+                        const parentNode = stack[stack.length - 1];
+
+                        if (!parentNode.children) {
+                            parentNode.children = [];
+                        }
+                        
+                        parentNode.children.push(item);
+
+                        // Add the item itself (which is now in the tree) to the stack for the next iteration.
+                        // We attach its level directly to the object for the while-loop comparison.
+                        item.level = level;
+                        stack.push(item);
                     }
+
+                    // Clean up the temporary 'level' property from all items before returning
+                    const cleanLevels = (nodes) => {
+                        for (const node of nodes) {
+                            delete node.level;
+                            if (node.children && node.children.length > 0) {
+                                cleanLevels(node.children);
+                            } else if (node.children && node.children.length === 0) {
+                                delete node.children;
+                            }
+                        }
+                    };
+                    cleanLevels(result);
+
                     return result;
                 };
+
                 try {
-                    const res = await fetch(`${this.config.workerUrl}/api/admin/nav`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(parseNavItems()) });
+                    const parsedData = parseNavItems();
+                    const res = await fetch(`${this.config.workerUrl}/api/admin/nav`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(parsedData) });
                     if (res.ok) alert('导航更新成功'); else throw new Error('更新失败');
                 } catch (e) { alert('更新失败'); }
             },
+            // --- END OF FIXED FUNCTION ---
+
             async handleLinksFormSubmit(e) { e.preventDefault(); const rows = document.querySelectorAll('.link-item-row'); const newLinks = Array.from(rows).map(r => ({ name: r.querySelector('[name=name]').value, url: r.querySelector('[name=url]').value })).filter(i => i.name && i.url); try { const res = await fetch(`${this.config.workerUrl}/api/admin/links`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(newLinks) }); if (res.ok) alert('友链更新成功'); else throw new Error('更新失败'); } catch (e) { alert('更新失败'); } },
             async handleStatsFormSubmit(event) { event.preventDefault(); const form = event.target; const statsData = { posts_total: form.posts_total.value, categories_total: form.categories_total.value, comments_total: form.comments_total.value, contact_email: form.contact_email.value, contact_github: form.contact_github.value }; try { const res = await fetch(`${this.config.workerUrl}/api/admin/stats`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(statsData) }); if (res.ok) alert('统计数据更新成功!'); else throw new Error('保存失败'); } catch (error) { alert('统计数据保存失败。'); } },
             async deleteComment(commentId) { if (!confirm('确认删除这条评论吗?')) return; try { const res = await fetch(`${this.config.workerUrl}/api/admin/comments/${commentId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${this.state.authToken}` } }); if (res.ok) { alert('删除成功'); this.showView('comments'); } else throw new Error('删除失败'); } catch (e) { alert('删除失败'); } },
