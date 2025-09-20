@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
     <script>
         tailwind.config = { darkMode: 'class' };
     </script>
@@ -20,14 +21,15 @@
         .dark .content-area { color: #d1d5db; }
         .content-area a { color: #3b82f6; text-decoration: underline; }
         .dark .content-area a { color: #60a5fa; }
+        #back-to-top { position: fixed; bottom: 20%; right: 2rem; display: none; width: 38px; height: 38px; border-radius: 3px; background-color: rgb(188 188 188); color: #1e1e1e; transition: background-color 0.3s ease, color 0.3s ease; }
+        #back-to-top:hover { background-color: rgb(123 123 123); color: #fff; }
+        #back-to-top i { font-size: 15px; font-weight: 400; }
         body { background-color: #f5f5f5; }
         .dark body { background-color: #111827; }
         .divide-gray-200 > :not([hidden]) ~ :not([hidden]), .border-gray-200 { border-color: rgb(245 245 245 / 1) !important; }
         .dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]), .dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
         .rounded-lg { border-radius: 0.2rem !important; }
         .rounded-md { border-radius: 0.1rem !important; }
-        
-        /* Swiper Customizations */
         .swiper-button-next, .swiper-button-prev { color: #ffffff; background-color: rgba(0,0,0,0.25); width: 44px; height: 44px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease, background-color 0.3s ease; }
         .swiper:hover .swiper-button-next, .swiper:hover .swiper-button-prev { opacity: 1; }
         .swiper-button-next:hover, .swiper-button-prev:hover { background-color: rgba(0,0,0,0.4); }
@@ -35,27 +37,14 @@
         .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
         .swiper-pagination-bullet-active { background-color: #ffffff; }
 
-        /* Back to Top Button Styles */
-        #back-to-top {
-            position: fixed;
-            bottom: 20%;
-            right: 2rem;
-            display: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 3px;
-            background-color: rgb(188 188 188);
-            color: #1e1e1e;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        #back-to-top:hover {
-            background-color: rgb(123 123 123);
-            color: #fff;
-        }
-        #back-to-top i {
-            font-size: 15px;
-            font-weight: 400;
-        }
+        /* --- Multi-level Menu Styles START --- */
+        .group .dropdown-menu { display: none; }
+        .group:hover > .dropdown-menu { display: block; }
+        .dropdown-menu .sub-menu { display: none; }
+        .dropdown-menu li:hover > .sub-menu { display: block; }
+        .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
+        .sub-menu { top: -0.25rem; left: 100%; } /* Position for fly-out menus */
+        /* --- Multi-level Menu Styles END --- */
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -99,52 +88,15 @@
                 window.addEventListener('load', () => this.router());
                 window.addEventListener('scroll', () => this.handleScroll());
             },
-            applyTheme() {
-                if (this.state.theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
-            },
-            toggleTheme() {
-                this.state.theme = this.state.theme === 'light' ? 'dark' : 'light';
-                localStorage.setItem('theme', this.state.theme);
-                this.applyTheme();
-                const btn = document.getElementById('theme-toggle-button');
-                if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
-            },
-            initSwiper() {
-                if (document.querySelector('.swiper') && (!this.state.carouselData || !this.state.carouselData.slides || this.state.carouselData.slides.length === 0)) return;
-                new Swiper('.swiper', {
-                    loop: true,
-                    autoplay: { delay: 5000, disableOnInteraction: false },
-                    pagination: { el: '.swiper-pagination', clickable: true },
-                    navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                });
-            },
-            initStickySidebar() {
-                const sidebarElement = document.querySelector('#sidebar');
-                if (sidebarElement) {
-                    if (this.state.sidebar) {
-                        this.state.sidebar.destroy();
-                    }
-                    this.state.sidebar = new StickySidebar('#sidebar', {
-                        topSpacing: 80,
-                        bottomSpacing: 20,
-                        containerSelector: '.main-container',
-                        innerWrapperSelector: '.sidebar-inner-wrapper'
-                    });
-                }
-            },
+            applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
+            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
+            initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
+            initStickySidebar() { const sidebarElement = document.querySelector('#sidebar'); if (sidebarElement) { if (this.state.sidebar) { this.state.sidebar.destroy(); } this.state.sidebar = new StickySidebar('#sidebar', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
             async router() {
                 const appContainer = document.getElementById('app');
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
-                await Promise.all([
-                    this.fetchNavIfNeeded(),
-                    this.fetchTagsIfNeeded(),
-                    this.fetchFriendlyLinksIfNeeded(),
-                    this.fetchRecentCommentsIfNeeded(),
-                    this.fetchSiteStatsIfNeeded(),
-                    this.fetchCarouselDataIfNeeded()
-                ]);
+                await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded() ]);
                 await this.fetchDataIfNeeded();
                 
                 if (path === '/') {
@@ -154,27 +106,14 @@
                     const slug = parts[2];
                     const post = await this.fetchSinglePost(slug);
                     await this.fetchCommentsForPost(slug);
-                    if (post) {
-                        const postIndex = this.state.posts.findIndex(p => p.slug === slug);
-                        if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post);
-                    }
+                    if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
                     appContainer.innerHTML = this.templates.mainLayout(this.templates.postPage(post));
                 } else if (['search', 'category', 'tag'].includes(parts[1])) {
                     let results = [];
                     let title = "文章列表";
-                    if(parts[1] === 'search' && parts[2]) {
-                        const query = decodeURIComponent(parts[2]);
-                        results = await this.fetchSearchResults(query);
-                        title = `搜索结果: "${query}"`;
-                    } else if (parts[1] === 'category') {
-                        const categoryName = parts.slice(2).map(decodeURIComponent).join('/');
-                        results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName));
-                        title = `分类: ${categoryName}`;
-                    } else if (parts[1] === 'tag' && parts[2]) {
-                        const tagName = decodeURIComponent(parts[2]);
-                        results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName));
-                        title = `标签: ${tagName}`;
-                    }
+                    if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
+                    } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
+                    } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
                     appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(results, title));
                     this.initSwiper();
                 } else {
@@ -184,16 +123,7 @@
                 this.initStickySidebar();
             },
             handleSearchSubmit(event) { event.preventDefault(); const query = event.target.querySelector('[name="query"]').value.trim(); if (query) window.location.hash = `#/search/${encodeURIComponent(query)}`; },
-            async handleCommentSubmit(event, slug) {
-                event.preventDefault();
-                const { nickname, content } = event.target;
-                if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; }
-                try {
-                    const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) });
-                    if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } 
-                    else throw new Error('评论失败');
-                } catch (e) { alert('评论提交失败'); }
-            },
+            async handleCommentSubmit(event, slug) { event.preventDefault(); const { nickname, content } = event.target; if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; } try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) }); if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } else throw new Error('评论失败'); } catch (e) { alert('评论提交失败'); } },
             async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: '#/' }]; } },
             async fetchDataIfNeeded(forceRefresh = false) { if (this.state.posts.length === 0 || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/posts`); const posts = await res.json(); this.state.posts = posts; const categories = {}; posts.forEach(p => { const catParts = p.category.split('/'); catParts.forEach((part, i) => { const catPath = catParts.slice(0, i + 1).join('/'); categories[catPath] = (categories[catPath] || 0) + 1; }); }); this.state.categories = categories; this.state.recentPosts = posts.slice(0, 5); } catch (e) {} },
             async fetchTagsIfNeeded() { if (this.state.tags.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/tags`); this.state.tags = await res.json(); } catch (e) {} },
@@ -205,8 +135,36 @@
             async fetchSearchResults(query) { try { const res = await fetch(`${this.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { return []; } },
             async fetchCarouselDataIfNeeded() { if (!this.state.carouselData) try { const res = await fetch(`${this.config.workerUrl}/api/carousel`); this.state.carouselData = await res.json(); } catch (e) {} },
             handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
+            
             templates: {
-                header: () => { const renderSubMenuItems = (items) => `<ul class="list-none">${items.map(item => `<li class="relative group/sub"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${(item.children||[]).length>0?'<i class="fas fa-chevron-right text-xs"></i>':''}</a>${(item.children||[]).length>0?`<div class="absolute left-full top-0 hidden group-hover/sub:block bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-48 border dark:border-gray-700">${renderSubMenuItems(item.children)}</div>`:''}</li>`).join('')}</ul>`; const renderTopLevelMenu = (items) => `<nav class="hidden sm:flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${(item.children||[]).length>0?'<i class="fas fa-chevron-down text-xs opacity-70"></i>':''}</a>${(item.children||[]).length>0?`<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md mt-1 py-1 z-20 w-48 border dark:border-gray-700">${renderSubMenuItems(item.children)}</div>`:''}</div>`).join('')}</nav>`; const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><i class="fas fa-cat text-2xl"></i><span>夏商记</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`; },
+                header: () => {
+                    const renderMenuItems = (items) => {
+                        return `<ul class="list-none">${items.map(item => {
+                            const hasChildren = item.children && item.children.length > 0;
+                            return `
+                                <li class="relative group">
+                                    <a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center">
+                                        <span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>
+                                        ${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}
+                                    </a>
+                                    ${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-48 border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
+                                </li>`;
+                        }).join('')}</ul>`;
+                    };
+                    const renderTopLevelMenu = (items) => `<nav class="hidden sm:flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
+                        const hasChildren = item.children && item.children.length > 0;
+                        return `<div class="relative group">
+                            <a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
+                                ${App.helpers.renderIcon(item.icon)}
+                                <span>${item.label}</span>
+                                ${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}
+                            </a>
+                            ${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md mt-1 py-1 z-20 w-48 border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
+                        </div>`;
+                    }).join('')}</nav>`;
+                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
+                    return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><i class="fas fa-cat text-2xl"></i><span>夏商记</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`;
+                },
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 sidebar: () => `<aside id="sidebar"><div class="sidebar-inner-wrapper space-y-2"><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div><p class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</p><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></div></a></li>`).join('')}</ul></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div><div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div></div></aside>`,
                 footer: () => { const stats = App.state.siteStats || {}; return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="py-8"><div class="flex flex-col items-center md:items-start space-y-[10px]"><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span><div class="flex items-center ml-2 space-x-[5px]">${stats.contact_email?`<a href="mailto:${stats.contact_email}" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${stats.contact_email}"><i class="fas fa-envelope"></i><span>${stats.contact_email}</span></a>`:''}${stats.contact_github?`<a href="${stats.contact_github}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-x-1.5 hover:text-blue-500"><i class="fab fa-github"></i><span>GitHub</span></a>`:''}</div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span><div class="flex items-center ml-2 space-x-[5px]"><span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span><span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span></div></div><div class="flex items-center"><span class="font-semibold text-gray-900 dark:text-gray-100">关于本站：</span><div class="ml-2"><span>Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span></div></div></div></div></div></footer>`; },
