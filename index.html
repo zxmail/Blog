@@ -158,7 +158,8 @@
                     }).join('')}</nav>`;
                     
                     const settings = App.state.siteSettings;
-                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-8 w-auto">` : '';
+                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
+                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-8 w-auto">` : '';
                     const blogName = settings?.blogName || '';
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
@@ -166,13 +167,13 @@
                         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div class="flex justify-between items-center h-[62px]">
                                 <div class="hidden md:flex flex-1 items-center gap-4">
-                                    <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-xl">${blogName}</span></a>
+                                    <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>
                                     ${renderTopLevelMenu(App.state.navItems)}
                                 </div>
                                 <div class="hidden md:flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
-                                    <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
-                                    <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
-                                    <a href="admin.html" class="text-sm hover:underline ml-2">登录</a>
+                                    <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
+                                    <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                                    <a href="admin.html" class="text-sm hover:underline">登录</a>
                                 </div>
 
                                 <div class="md:hidden flex flex-1 w-full justify-between items-center">
@@ -180,7 +181,7 @@
                                         <button onclick="App.toggleMobileMenu()" class="p-2 -ml-2"><i class="fas fa-bars text-xl"></i></button>
                                     </div>
                                     <div class="flex-shrink-0">
-                                        <a href="#" class="flex items-center gap-2">${logoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                                        <a href="#" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
                                     </div>
                                     <div class="flex-1 text-right">
                                          <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 -mr-2"><i class="fas fa-search text-xl"></i></button>
