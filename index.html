@@ -112,26 +112,50 @@
                 await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
                 await this.fetchDataIfNeeded();
                 
+                let pageContentHtml = '';
+
                 if (path === '/') {
-                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(this.state.posts));
-                    this.initSwiper();
-                } else if (parts[1] === 'post' && parts[2]) {
-                    const slug = parts[2];
-                    const post = await this.fetchSinglePost(slug);
-                    await this.fetchCommentsForPost(slug);
-                    if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
-                    appContainer.innerHTML = this.templates.mainLayout(this.templates.postPage(post));
-                } else if (['search', 'category', 'tag'].includes(parts[1])) {
-                    let results = [];
-                    let title = "文章列表";
-                    if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
-                    } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
-                    } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
-                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(results, title));
+                    const carouselHtml = this.templates.carousel();
+                    const homeContent = this.templates.homePage(this.state.posts);
+                    // Manually construct the page for homepage to have a full-width carousel
+                    pageContentHtml = `
+                        <div class="flex-grow">
+                            ${this.templates.header()}
+                            ${carouselHtml}
+                            <main class="max-w-7xl mx-auto w-full p-4 sm:px-6">
+                                <div class="lg:flex gap-[23px] main-container">
+                                    <div class="w-full lg:w-3/4">${homeContent}</div>
+                                    <div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${this.templates.sidebar()}</div>
+                                </div>
+                            </main>
+                            ${this.templates.friendlyLinksSection()}
+                        </div>
+                        ${this.templates.footer()}
+                    `;
+                    appContainer.innerHTML = pageContentHtml;
                     this.initSwiper();
                 } else {
-                    appContainer.innerHTML = this.templates.mainLayout(this.templates.notFoundPage());
+                    // For all other pages, use the standard layout
+                    let content;
+                    if (parts[1] === 'post' && parts[2]) {
+                        const slug = parts[2];
+                        const post = await this.fetchSinglePost(slug);
+                        await this.fetchCommentsForPost(slug);
+                        if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
+                        content = this.templates.postPage(post);
+                    } else if (['search', 'category', 'tag'].includes(parts[1])) {
+                        let results = [];
+                        let title = "文章列表";
+                        if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
+                        } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
+                        } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
+                        content = this.templates.homePage(results, title);
+                    } else {
+                        content = this.templates.notFoundPage();
+                    }
+                    appContainer.innerHTML = this.templates.mainLayout(content);
                 }
+                
                 document.title = this.state.siteSettings?.blogName || '我的博客';
                 this.initStickySidebar();
             },
@@ -255,8 +279,8 @@
                     </footer>`;
                 },
                 friendlyLinksSection: () => { if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return ''; return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`; },
-                carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const slidesHtml = data.slides.map(slide => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover">`; const linkWrapper = slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${slideContent}</a>` : slideContent; return `<div class="swiper-slide">${linkWrapper}</div>`; }).join(''); return `<div class="swiper w-full h-[230px] rounded-lg shadow-lg"><div class="swiper-wrapper">${slidesHtml}</div><div class="swiper-pagination"></div><div class="swiper-button-prev"></div><div class="swiper-button-next"></div></div>`; },
-                homePage: (posts, title = "最新文章") => `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-lg md:text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`,
+                carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const slidesHtml = data.slides.map(slide => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover">`; const linkWrapper = slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${slideContent}</a>` : slideContent; return `<div class="swiper-slide">${linkWrapper}</div>`; }).join(''); return `<div class="swiper w-full aspect-video md:rounded-lg md:shadow-lg"><div class="swiper-wrapper">${slidesHtml}</div><div class="swiper-pagination"></div><div class="swiper-button-prev"></div><div class="swiper-button-next"></div></div>`; },
+                homePage: (posts, title = "最新文章") => `<div class="mt-4"><h1 class="text-lg md:text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`,
                 postCard: (post) => `<div class="p-6 flex flex-row items-center">
                     <div class="relative w-1/3 flex-shrink-0 overflow-hidden rounded-md aspect-[16/9]">
                         <a href="#/post/${post.slug}" class="block h-full w-full group">
