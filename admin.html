@@ -229,7 +229,6 @@
             removeCarouselSlideRow(button) { button.closest('.carousel-slide-row').remove(); },
             async handleCarouselFormSubmit(event) { event.preventDefault(); const form = event.target; const rows = form.querySelectorAll('.carousel-slide-row'); const slides = Array.from(rows).map(row => ({ imageUrl: row.querySelector('[name=imageUrl]').value, linkUrl: row.querySelector('[name=linkUrl]').value })).filter(s => s.imageUrl); const data = { slides }; try { const res = await fetch(`${this.config.workerUrl}/api/admin/carousel`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.authToken}` }, body: JSON.stringify(data) }); if (res.ok) { alert('轮播图设置保存成功！'); this.state.carouselData = data; } else throw new Error('保存失败'); } catch (e) { alert('保存失败'); } },
             
-            // 新增：处理基本设置表单提交
             async handleSettingsFormSubmit(e) {
                 e.preventDefault();
                 const form = e.target;
@@ -250,7 +249,6 @@
                 } catch (error) { alert('基本设置保存失败。'); }
             },
             
-            // 新增：初始化拖拽排序
             initSortableSidebar() {
                 const list = document.getElementById('sidebar-modules-list');
                 if (!list) return;
@@ -296,7 +294,6 @@
                 commentsManager: () => `<div class="w-full"><h2 class="text-xl font-semibold mb-6">评论管理</h2><div class="bg-white dark:bg-gray-800 shadow rounded-lg"><ul class="divide-y dark:divide-gray-700">${(App.state.recentComments || []).map(c => `<li class="p-4"><div class="flex justify-between items-start"><div class="text-sm"><p class="mb-1"><span class="font-bold">${c.nickname}</span> 评论了文章 <a href="index.html#/post/${c.slug}" target="_blank" class="text-blue-500">${c.postTitle}</a></p><p class="bg-gray-100 dark:bg-gray-700 p-2 rounded">${c.content}</p></div><button onclick="App.deleteComment('${c.id}')" class="text-red-500 hover:underline text-sm">删除</button></div></li>`).join('')}</ul></div></div>`,
                 siteSettingsEditor: () => { const stats = App.state.siteStats || {}; return `<div class="w-full"><h2 class="text-xl font-semibold mb-6">网站设置</h2><form onsubmit="App.handleStatsFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4"><h3 class="text-lg font-medium">联系方式</h3><div><label for="contact_email" class="block text-sm font-medium">联系邮箱</label><input type="email" id="contact_email" name="contact_email" value="${stats.contact_email || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="contact_github" class="block text-sm font-medium">GitHub 地址</label><input type="url" id="contact_github" name="contact_github" value="${stats.contact_github || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><h3 class="text-lg font-medium pt-4 border-t dark:border-gray-700">网站统计基数</h3><p class="text-sm text-gray-500">这里设置的值将作为统计的基数。</p><div><label for="posts_total" class="block text-sm font-medium">文章总数</label><input type="number" id="posts_total" name="posts_total" value="${stats.posts_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="categories_total" class="block text-sm font-medium">分类总数</label><input type="number" id="categories_total" name="categories_total" value="${stats.categories_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div><label for="comments_total" class="block text-sm font-medium">评论总数</label><input type="number" id="comments_total" name="comments_total" value="${stats.comments_total || 0}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="text-right border-t dark:border-gray-700 pt-4"><button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">保存设置</button></div></form></div>`;},
                 
-                // 新增模板：基本设置页面
                 basicSettingsEditor: () => {
                     const settings = App.state.siteSettings || { blogName: '', logoUrl: '', sidebarModules: [] };
                     const modulesHtml = settings.sidebarModules.map(module => `
@@ -317,7 +314,7 @@
                         <form onsubmit="App.handleSettingsFormSubmit(event)" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-6">
                             <div>
                                 <label for="blogName" class="block text-sm font-medium">博客名称</label>
-                                <input type="text" id="blogName" name="blogName" value="${settings.blogName || ''}" required class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
+                                <input type="text" id="blogName" name="blogName" value="${settings.blogName || ''}" class="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label for="logoUrl" class="block text-sm font-medium">Logo图片地址</label>
