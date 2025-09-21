@@ -68,7 +68,7 @@
                 friendlyLinks: [],
                 recentComments: [],
                 siteStats: null,
-                siteSettings: null, // 新增
+                siteSettings: null,
                 comments: {}, 
                 theme: localStorage.getItem('theme') || 'light',
                 carouselData: null,
@@ -96,7 +96,7 @@
                 const appContainer = document.getElementById('app');
                 const path = window.location.hash.slice(1) || '/';
                 const parts = path.split('/');
-                await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]); // 新增
+                await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
                 await this.fetchDataIfNeeded();
                 
                 if (path === '/') {
@@ -132,7 +132,7 @@
             async fetchCommentsForPost(slug) { try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`); this.state.comments[slug] = await res.json(); } catch (e) { this.state.comments[slug] = []; } },
             async fetchSinglePost(slug) { try { const response = await fetch(`${this.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { return null; } },
             async fetchSiteStatsIfNeeded(forceRefresh = false) { if (!this.state.siteStats || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/stats`); this.state.siteStats = await res.json(); } catch (e) {} },
-            async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} }, // 新增
+            async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} },
             async fetchSearchResults(query) { try { const res = await fetch(`${this.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { return []; } },
             async fetchCarouselDataIfNeeded() { if (!this.state.carouselData) try { const res = await fetch(`${this.config.workerUrl}/api/carousel`); this.state.carouselData = await res.json(); } catch (e) {} },
             handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
@@ -164,14 +164,17 @@
                         </div>`;
                     }).join('')}</nav>`;
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
+                    
+                    // --- MODIFIED LOGIC ---
                     const settings = App.state.siteSettings;
-                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName} Logo" class="h-8 w-auto">` : `<i class="fas fa-cat text-2xl"></i>`;
-                    const blogName = settings?.blogName || '夏商记';
+                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-8 w-auto">` : '';
+                    const blogName = settings?.blogName || '';
+                    // --- END OF MODIFICATION ---
+
                     return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span>${blogName}</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`;
                 },
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
-                // 拆分后的侧边栏模块
                 sidebarModules: {
                     search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
                     stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
@@ -181,10 +184,9 @@
                     recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
                 },
 
-                // 动态生成侧边栏
                 sidebar: () => {
                     const modulesConfig = App.state.siteSettings?.sidebarModules;
-                    if (!modulesConfig) return ''; // 如果没有配置，则不显示侧边栏
+                    if (!modulesConfig) return '';
                     const modulesHtml = modulesConfig
                         .filter(module => module.enabled)
                         .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
