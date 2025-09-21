@@ -257,6 +257,16 @@
                 },
 
                 // --- Other Templates ---
+                // --- RE-ADDED MISSING SIDEBAR FUNCTION ---
+                sidebar: () => {
+                    const modulesConfig = App.state.siteSettings?.sidebarModules;
+                    if (!modulesConfig) return '';
+                    const modulesHtml = modulesConfig
+                        .filter(module => module.enabled)
+                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
+                        .join('');
+                    return `<aside id="sidebar"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
+                },
                 sidebarModules: {
                     search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
                     stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
