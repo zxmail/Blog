@@ -262,7 +262,7 @@
                         <a href="#/post/${post.slug}" class="block h-full w-full group">
                             <img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';">
                         </a>
-                        <a href="#/category/${encodeURIComponent(post.category)}" class="absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a>
+                        <a href="#/category/${encodeURIComponent(post.category)}" class="hidden md:block absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a>
                     </div>
                     <div class="pl-5 flex-grow flex flex-col justify-between self-stretch">
                         <div>
