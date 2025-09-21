@@ -44,6 +44,19 @@
         .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
         .sub-menu { top: -0.25rem; left: 100%; }
         /* --- Multi-level Menu Styles END --- */
+
+        /* --- NEW: Mobile Responsive Styles --- */
+        @media screen and (max-width: 800px) {
+            .main-sidebar {
+                display: none;
+            }
+            .desktop-nav, .desktop-header-controls {
+                display: none;
+            }
+            .mobile-header-controls {
+                display: flex;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -90,6 +103,13 @@
             },
             applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
             toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
+            
+            // --- NEW: Function to toggle mobile menu ---
+            toggleMobileMenu() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            },
+
             initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
             initStickySidebar() { const sidebarElement = document.querySelector('#sidebar'); if (sidebarElement) { if (this.state.sidebar) { this.state.sidebar.destroy(); } this.state.sidebar = new StickySidebar('#sidebar', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
             async router() {
@@ -142,36 +162,54 @@
                     const renderMenuItems = (items) => {
                         return `<ul class="list-none">${items.map(item => {
                             const hasChildren = item.children && item.children.length > 0;
-                            return `
-                                <li class="relative group">
-                                    <a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center">
-                                        <span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>
-                                        ${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}
-                                    </a>
-                                    ${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
-                                </li>`;
+                            return `<li class="relative group"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
                         }).join('')}</ul>`;
                     };
-                    const renderTopLevelMenu = (items) => `<nav class="hidden sm:flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
+                    const renderMobileMenuItems = (items) => {
+                         return `<ul class="flex flex-col space-y-1">${items.map(item => `<li><a href="${item.url}" class="block px-4 py-3 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">${App.helpers.renderIcon(item.icon)} ${item.label}</a></li>`).join('')}</ul>`;
+                    };
+                    const renderTopLevelMenu = (items) => `<nav class="hidden md:flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
                         const hasChildren = item.children && item.children.length > 0;
-                        return `<div class="relative group">
-                            <a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
-                                ${App.helpers.renderIcon(item.icon)}
-                                <span>${item.label}</span>
-                                ${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}
-                            </a>
-                            ${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}
-                        </div>`;
+                        return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
                     }).join('')}</nav>`;
-                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
                     
                     const settings = App.state.siteSettings;
-                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
+                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-8 w-auto">` : '';
                     const blogName = settings?.blogName || '';
+                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
-                    return `<header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]"><div class="max-w-7xl mx-auto flex justify-between items-center h-[62px] px-4 sm:px-6 lg:px-8"><div class="flex items-center gap-4"><a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>${renderTopLevelMenu(App.state.navItems)}</div><div class="flex items-center gap-[6px] text-gray-600 dark:text-gray-300"><button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i class="fal fa-search h-5 w-5"></i></button><button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">${themeIcon}</button><a href="admin.html" class="text-sm hover:underline">登录</a></div></div></header>`;
+                    return `<header class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="flex justify-between items-center h-[62px]">
+                                <div class="desktop-nav flex items-center gap-4">
+                                    <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-xl">${blogName}</span></a>
+                                    ${renderTopLevelMenu(App.state.navItems)}
+                                </div>
+                                <div class="desktop-header-controls flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
+                                    <button id="search-toggle" onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
+                                    <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                                    <a href="admin.html" class="text-sm hover:underline ml-2">登录</a>
+                                </div>
+
+                                <div class="mobile-header-controls w-full justify-between items-center hidden">
+                                    <div class="flex-1 text-left">
+                                        <button onclick="App.toggleMobileMenu()" class="p-2"><i class="fas fa-bars text-xl"></i></button>
+                                    </div>
+                                    <div class="flex-none">
+                                        <a href="#" class="flex items-center gap-2">${logoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                         <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2"><i class="fas fa-search text-xl"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="mobile-menu" class="hidden p-4 border-t border-gray-200 dark:border-gray-700">
+                            ${renderMobileMenuItems(App.state.navItems)}
+                        </div>
+                    </header>`;
                 },
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-full">${content}</div><div class="w-full lg:w-1/4 main-sidebar">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
                 sidebarModules: {
                     search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
@@ -195,10 +233,7 @@
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const contactsHtml = (stats.custom_contacts || []).map(contact => 
-                        `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}">
-                            <i class="${contact.icon}"></i>
-                            <span>${contact.content}</span>
-                        </a>`
+                        `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
                     ).join('');
 
                     return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
