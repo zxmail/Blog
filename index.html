@@ -97,7 +97,6 @@
             initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
             initStickySidebar() { const sidebarElement = document.querySelector('#sidebar'); if (sidebarElement) { if (this.state.sidebar) { this.state.sidebar.destroy(); } this.state.sidebar = new StickySidebar('#sidebar', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
             
-            // --- ROUTER RESTRUCTURED TO ASSEMBLE THE PAGE ---
             async router() {
                 const appContainer = document.getElementById('app');
                 const path = window.location.hash.slice(1) || '/';
@@ -129,7 +128,6 @@
                     pageContent = this.templates.notFoundPage();
                 }
 
-                // Assemble the page from the three main parts, matching your desired structure
                 appContainer.innerHTML = `
                     ${this.templates.header()}
                     <div class="flex-grow">
