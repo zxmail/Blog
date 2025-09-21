@@ -96,7 +96,6 @@
 
             initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
             initStickySidebar() { const sidebarElement = document.querySelector('#sidebar'); if (sidebarElement) { if (this.state.sidebar) { this.state.sidebar.destroy(); } this.state.sidebar = new StickySidebar('#sidebar', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
-            
             async router() {
                 const appContainer = document.getElementById('app');
                 const path = window.location.hash.slice(1) || '/';
@@ -104,43 +103,27 @@
                 await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
                 await this.fetchDataIfNeeded();
                 
-                let pageContent = '';
-                let shouldInitSwiper = false;
-
                 if (path === '/') {
-                    pageContent = this.templates.homePage(this.state.posts);
-                    shouldInitSwiper = true;
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(this.state.posts));
+                    this.initSwiper();
                 } else if (parts[1] === 'post' && parts[2]) {
                     const slug = parts[2];
                     const post = await this.fetchSinglePost(slug);
                     await this.fetchCommentsForPost(slug);
                     if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
-                    pageContent = this.templates.postPage(post);
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.postPage(post));
                 } else if (['search', 'category', 'tag'].includes(parts[1])) {
                     let results = [];
                     let title = "文章列表";
                     if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
                     } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
                     } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
-                    pageContent = this.templates.homePage(results, title);
-                    shouldInitSwiper = true;
-                } else {
-                    pageContent = this.templates.notFoundPage();
-                }
-
-                appContainer.innerHTML = `
-                    ${this.templates.header()}
-                    <div class="flex-grow">
-                        ${this.templates.mainBody(pageContent)}
-                    </div>
-                    ${this.templates.footer()}
-                `;
-
-                document.title = this.state.siteSettings?.blogName || '我的博客';
-                
-                if (shouldInitSwiper) {
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(results, title));
                     this.initSwiper();
+                } else {
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.notFoundPage());
                 }
+                document.title = this.state.siteSettings?.blogName || '我的博客';
                 this.initStickySidebar();
             },
             handleSearchSubmit(event) { event.preventDefault(); const query = event.target.querySelector('[name="query"]').value.trim(); if (query) window.location.hash = `#/search/${encodeURIComponent(query)}`; },
@@ -159,7 +142,6 @@
             handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
             
             templates: {
-                // --- Part 1: Header ---
                 header: () => {
                     const renderMenuItems = (items) => {
                         return `<ul class="list-none">${items.map(item => {
@@ -177,7 +159,7 @@
                     
                     const settings = App.state.siteSettings;
                     const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
-                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-8 w-auto">` : '';
+                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
                     const blogName = settings?.blogName || '';
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
@@ -212,19 +194,27 @@
                         </div>
                     </header>`;
                 },
-
-                // --- Part 2: Main Body (Content + Sidebar + Friendly Links) ---
-                mainBody: (content) => `
-                    <main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8">
-                        <div class="lg:flex gap-[23px] main-container">
-                            <div class="w-full lg:w-3/4">${content}</div>
-                            <div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.sidebar()}</div>
-                        </div>
-                    </main>
-                    ${App.templates.friendlyLinksSection()}
-                `,
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6 lg:py-8"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
-                // --- Part 3: Footer ---
+                sidebarModules: {
+                    search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
+                    stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
+                    recentPosts: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div><p class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</p><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></div></a></li>`).join('')}</ul></div>`,
+                    categories: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div>`,
+                    tags: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div>`,
+                    recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
+                },
+
+                sidebar: () => {
+                    const modulesConfig = App.state.siteSettings?.sidebarModules;
+                    if (!modulesConfig) return '';
+                    const modulesHtml = modulesConfig
+                        .filter(module => module.enabled)
+                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
+                        .join('');
+                    return `<aside id="sidebar"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
+                },
+                
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const contactsHtml = (stats.custom_contacts || []).map(contact => 
@@ -254,26 +244,6 @@
                             </div>
                         </div>
                     </footer>`;
-                },
-
-                // --- Other Templates ---
-                // --- RE-ADDED MISSING SIDEBAR FUNCTION ---
-                sidebar: () => {
-                    const modulesConfig = App.state.siteSettings?.sidebarModules;
-                    if (!modulesConfig) return '';
-                    const modulesHtml = modulesConfig
-                        .filter(module => module.enabled)
-                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
-                        .join('');
-                    return `<aside id="sidebar"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
-                },
-                sidebarModules: {
-                    search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
-                    stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
-                    recentPosts: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div><p class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</p><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></div></a></li>`).join('')}</ul></div>`,
-                    categories: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div>`,
-                    tags: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div>`,
-                    recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
                 },
                 friendlyLinksSection: () => { if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return ''; return `<div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`; },
                 carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const slidesHtml = data.slides.map(slide => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover">`; const linkWrapper = slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${slideContent}</a>` : slideContent; return `<div class="swiper-slide">${linkWrapper}</div>`; }).join(''); return `<div class="swiper w-full h-[230px] rounded-lg shadow-lg"><div class="swiper-wrapper">${slidesHtml}</div><div class="swiper-pagination"></div><div class="swiper-button-prev"></div><div class="swiper-button-next"></div></div>`; },
