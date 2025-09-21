@@ -36,25 +36,12 @@
         .swiper-button-next:after, .swiper-button-prev:after { font-size: 20px; font-weight: bold; }
         .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
         .swiper-pagination-bullet-active { background-color: #ffffff; }
-        /* --- Multi-level Menu Styles START --- */
         .group .dropdown-menu { display: none; }
         .group:hover > .dropdown-menu { display: block; }
         .dropdown-menu .sub-menu { display: none; }
         .dropdown-menu li:hover > .sub-menu { display: block; }
         .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
         .sub-menu { top: -0.25rem; left: 100%; }
-        /* --- Multi-level Menu Styles END --- */
-        @media screen and (max-width: 800px) {
-            .main-sidebar {
-                display: none;
-            }
-            .desktop-nav, .desktop-header-controls {
-                display: none;
-            }
-            .mobile-header-controls {
-                display: flex;
-            }
-        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -165,7 +152,7 @@
                     const renderMobileMenuItems = (items) => {
                          return `<ul class="flex flex-col space-y-1">${items.map(item => `<li><a href="${item.url}" class="block px-4 py-3 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">${App.helpers.renderIcon(item.icon)} ${item.label}</a></li>`).join('')}</ul>`;
                     };
-                    const renderTopLevelMenu = (items) => `<nav>${items.map(item => {
+                    const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
                         const hasChildren = item.children && item.children.length > 0;
                         return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
                     }).join('')}</nav>`;
@@ -180,7 +167,7 @@
                             <div class="flex justify-between items-center h-[62px]">
                                 <div class="hidden md:flex flex-1 items-center gap-4">
                                     <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-xl">${blogName}</span></a>
-                                    <div class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${renderTopLevelMenu(App.state.navItems)}</div>
+                                    ${renderTopLevelMenu(App.state.navItems)}
                                 </div>
                                 <div class="hidden md:flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
                                     <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
@@ -189,20 +176,20 @@
                                 </div>
 
                                 <div class="md:hidden flex flex-1 w-full justify-between items-center">
-                                    <div class="text-left">
-                                        <button onclick="App.toggleMobileMenu()" class="p-2"><i class="fas fa-bars text-xl"></i></button>
+                                    <div class="flex-1 text-left">
+                                        <button onclick="App.toggleMobileMenu()" class="p-2 -ml-2"><i class="fas fa-bars text-xl"></i></button>
                                     </div>
                                     <div class="flex-shrink-0">
                                         <a href="#" class="flex items-center gap-2">${logoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
                                     </div>
-                                    <div class="text-right">
-                                         <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2"><i class="fas fa-search text-xl"></i></button>
+                                    <div class="flex-1 text-right">
+                                         <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 -mr-2"><i class="fas fa-search text-xl"></i></button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="mobile-menu" class="hidden md:hidden p-4 border-t border-gray-200 dark:border-gray-700">
-                            ${renderMobileMenuItems(App.state.navItems)}
+                        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200 dark:border-gray-700">
+                           <div class="p-4">${renderMobileMenuItems(App.state.navItems)}</div>
                         </div>
                     </header>`;
                 },
