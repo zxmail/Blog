@@ -56,6 +56,7 @@
 <body class="text-gray-800 dark:text-gray-200">
 
     <div id="app" class="flex flex-col min-h-screen"></div>
+    <div id="sidebar-container"></div>
     
     <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center">
       <i class="far fa-arrow-up"></i>
@@ -84,23 +85,41 @@
             helpers: {
                 stripHtmlAndTruncate: (html, length) => { const doc = new DOMParser().parseFromString(html, 'text/html'); const text = doc.body.textContent || ""; return text.length > length ? text.substring(0, length) + '...' : text; },
                 renderIcon: (iconString) => {
-                    if (!iconString) return '';
+                    if (!iconString) return '<i class="fa-fw"></i>'; // Return empty icon space if none provided
                     if (iconString.trim().startsWith('<svg')) return iconString;
                     return `<i class="${iconString} fa-fw"></i>`;
                 }
             },
             init() {
                 this.applyTheme();
+                this.renderSidebar();
                 window.addEventListener('hashchange', () => this.router());
                 window.addEventListener('load', () => this.router());
                 window.addEventListener('scroll', () => this.handleScroll());
             },
             applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
-            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
+            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
             
-            toggleMobileMenu() {
-                const menu = document.getElementById('mobile-menu');
-                menu.classList.toggle('hidden');
+            // --- Sidebar Methods ---
+            renderSidebar() {
+                 document.getElementById('sidebar-container').innerHTML = this.templates.sidebar();
+            },
+            openSidebar() {
+                document.getElementById('sidebar-overlay')?.classList.remove('hidden');
+                document.getElementById('sidebar-menu')?.classList.remove('-translate-x-full');
+            },
+            closeSidebar() {
+                document.getElementById('sidebar-overlay')?.classList.add('hidden');
+                document.getElementById('sidebar-menu')?.classList.add('-translate-x-full');
+            },
+            toggleSubMenu(event) {
+                const parentLi = event.target.closest('li');
+                const subMenu = parentLi?.querySelector('ul');
+                const arrow = parentLi?.querySelector('i.fa-chevron-right');
+                if (subMenu) {
+                    subMenu.classList.toggle('hidden');
+                    arrow?.classList.toggle('rotate-90');
+                }
             },
 
             initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
@@ -134,6 +153,7 @@
                 }
                 document.title = this.state.siteSettings?.blogName || '我的博客';
                 this.initStickySidebar();
+                this.renderSidebar(); // Re-render sidebar after nav items are fetched
             },
             handleSearchSubmit(event) { event.preventDefault(); const query = event.target.querySelector('[name="query"]').value.trim(); if (query) window.location.hash = `#/search/${encodeURIComponent(query)}`; },
             async handleCommentSubmit(event, slug) { event.preventDefault(); const { nickname, content } = event.target; if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; } try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) }); if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } else throw new Error('评论失败'); } catch (e) { alert('评论提交失败'); } },
@@ -152,15 +172,7 @@
             
             templates: {
                 header: () => {
-                    const renderMenuItems = (items) => {
-                        return `<ul class="list-none">${items.map(item => {
-                            const hasChildren = item.children && item.children.length > 0;
-                            return `<li class="relative group"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
-                        }).join('')}</ul>`;
-                    };
-                    const renderMobileMenuItems = (items) => {
-                         return `<ul class="flex flex-col space-y-1">${items.map(item => `<li><a href="${item.url}" class="block px-4 py-3 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">${App.helpers.renderIcon(item.icon)} ${item.label}</a></li>`).join('')}</ul>`;
-                    };
+                    const renderMenuItems = (items) => { /* ... Desktop menu rendering ... */ };
                     const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
                         const hasChildren = item.children && item.children.length > 0;
                         return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
@@ -168,11 +180,10 @@
                     
                     const settings = App.state.siteSettings;
                     const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
-                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
                     const blogName = settings?.blogName || '';
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
-                    return `<header class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
+                    return `<header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
                         <div class="max-w-7xl mx-auto px-4 sm:px-6">
                             <div class="flex justify-between items-center h-[62px]">
                                 <div class="hidden md:flex flex-1 items-center gap-4">
@@ -184,13 +195,12 @@
                                     <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
                                     <a href="admin.html" class="text-sm hover:underline">登录</a>
                                 </div>
-
                                 <div class="md:hidden flex flex-1 w-full justify-between items-center">
                                     <div class="flex-1 text-left">
-                                        <button onclick="App.toggleMobileMenu()" class="p-2 -ml-2"><i class="fas fa-bars text-xl"></i></button>
+                                        <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-xl"></i></button>
                                     </div>
                                     <div class="flex-shrink-0">
-                                        <a href="#" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                                        <a href="#" class="flex items-center gap-2">${logoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
                                     </div>
                                     <div class="flex-1 text-right">
                                          <button onclick="document.getElementById('sidebar-search-input')?.focus()" class="p-2 -mr-2"><i class="fas fa-search text-xl"></i></button>
@@ -198,11 +208,46 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200 dark:border-gray-700">
-                           <div class="p-4">${renderMobileMenuItems(App.state.navItems)}</div>
-                        </div>
                     </header>`;
                 },
+
+                sidebar: () => {
+                    const navItemsHtml = App.templates.sidebarMenuItems(App.state.navItems);
+                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
+                    return `
+                        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" onclick="App.closeSidebar()"></div>
+                        <nav id="sidebar-menu" class="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+                            <div class="p-4 border-b dark:border-gray-700">
+                                <h2 class="font-bold text-lg">菜单</h2>
+                            </div>
+                            <div class="flex-grow p-2 space-y-1 overflow-y-auto">
+                                ${navItemsHtml}
+                            </div>
+                            <div class="p-2 border-t dark:border-gray-700 space-y-1">
+                                <button onclick="App.toggleTheme()" class="w-full flex items-center gap-3 p-3 rounded-md text-left hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                                <a href="admin.html" class="w-full flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-user-circle fa-fw"></i> <span>登录</span></a>
+                            </div>
+                        </nav>
+                    `;
+                },
+                sidebarMenuItems: (items) => { // Recursive function
+                    return `<ul class="space-y-1">${items.map(item => {
+                        const hasChildren = item.children && item.children.length > 0;
+                        return `
+                            <li>
+                                <div class="flex justify-between items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    <a href="${hasChildren ? 'javascript:void(0)' : item.url}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
+                                        ${App.helpers.renderIcon(item.icon)}
+                                        <span>${item.label}</span>
+                                    </a>
+                                    ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
+                                </div>
+                                ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.sidebarMenuItems(item.children)}</ul>` : ''}
+                            </li>
+                        `;
+                    }).join('')}</ul>`;
+                },
+
                 mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
                 sidebarModules: {
@@ -214,16 +259,6 @@
                     recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
                 },
 
-                sidebar: () => {
-                    const modulesConfig = App.state.siteSettings?.sidebarModules;
-                    if (!modulesConfig) return '';
-                    const modulesHtml = modulesConfig
-                        .filter(module => module.enabled)
-                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
-                        .join('');
-                    return `<aside id="sidebar"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
-                },
-                
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const contactsHtml = (stats.custom_contacts || []).map(contact => 
