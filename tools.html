@@ -165,6 +165,8 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
+        // CORRECTED: Logic now destroys and recreates the QR code on every change
+        // to ensure all options are reliably applied.
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
@@ -172,8 +174,9 @@
             let margin = parseInt(document.getElementById('qr-margin').value, 10);
             const outputDiv = document.getElementById('qr-code-output');
             
+            outputDiv.innerHTML = ''; // Clear previous QR code
+
             if (!text) {
-                outputDiv.innerHTML = '';
                 this.state.qrCodeInstance = null;
                 return;
             }
@@ -191,12 +194,18 @@
                 backgroundOptions: { color: margin > 0 ? "#fff" : "transparent" },
             };
 
+            // Always create a new instance to ensure options are applied correctly
+            this.state.qrCodeInstance = new QRCodeStyling(options);
+            this.state.qrCodeInstance.append(outputDiv);
+        };
+
+        App.handleDownloadQRCode = function() {
             if (!this.state.qrCodeInstance) {
-                this.state.qrCodeInstance = new QRCodeStyling(options);
-                this.state.qrCodeInstance.append(outputDiv);
-            } else {
-                this.state.qrCodeInstance.update(options);
+                alert("请先生成一个二维码！");
+                return;
             }
+            const extension = document.getElementById('qr-format').value;
+            this.state.qrCodeInstance.download({ name: "qrcode", extension: extension });
         };
 
         App.router = async function() {
@@ -217,7 +226,6 @@
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
             this.initStickySidebar();
             if (this.state.activeToolId === 'qrcode') {
-                // Generate a QR code on initial load with default values
                 document.getElementById('qr-text-input').value = 'https://blog-9ce.pages.dev/';
                 this.handleGenerateQRCode();
             }
@@ -288,13 +296,13 @@
                     <div class="flex flex-col md:flex-row gap-6">
                         <div class="w-full md:w-1/2">
                             <label for="qr-text-input" class="block text-sm font-medium mb-2">URL或其他文本:</label>
-                            <textarea id="qr-text-input" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="在此处输入内容..."></textarea>
+                            <textarea id="qr-text-input" onkeyup="App.handleGenerateQRCode()" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="在此处输入内容..."></textarea>
                         </div>
                         <div class="w-full md:w-1/2 flex gap-4">
                             <div class="flex-grow space-y-3">
                                 <div>
                                     <label for="qr-error-level" class="block text-xs font-medium mb-1">纠错级别:</label>
-                                    <select id="qr-error-level" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                    <select id="qr-error-level" onchange="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                         <option value="L">L (7%)</option>
                                         <option value="M" selected>M (15%)</option>
                                         <option value="Q">Q (25%)</option>
@@ -303,13 +311,24 @@
                                 </div>
                                 <div>
                                     <label for="qr-margin" class="block text-xs font-medium mb-1">边缘留白 (Margin):</label>
-                                    <input type="number" id="qr-margin" value="1" min="0" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                    <input type="number" id="qr-margin" value="1" min="0" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                 </div>
                                 <div>
                                     <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
-                                    <input type="number" id="qr-size" value="80" min="20" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                    <input type="number" id="qr-size" value="80" min="20" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                 </div>
-                                <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
+                                <div class="flex gap-2">
+                                    <div class="w-1/2">
+                                        <label for="qr-format" class="block text-xs font-medium mb-1">图片格式:</label>
+                                        <select id="qr-format" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                            <option value="png" selected>PNG</option>
+                                            <option value="jpeg">JPEG</option>
+                                        </select>
+                                    </div>
+                                    <div class="w-1/2 flex items-end">
+                                        <button onclick="App.handleDownloadQRCode()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-md hover:bg-blue-600">下载</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100">
                                 <div id="qr-code-output" class="w-full h-full flex items-center justify-center"></div>
