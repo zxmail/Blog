@@ -6,11 +6,7 @@
     <title>在线工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
@@ -29,6 +25,18 @@
       <i class="far fa-arrow-up"></i>
     </button>
 
+    <div id="toast-container" class="fixed top-5 right-5 z-50"></div>
+
+    <div id="qrcode-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4" onclick="App.closeQrCodeModal()">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xs text-center relative" onclick="event.stopPropagation()">
+            <button onclick="App.closeQrCodeModal()" class="absolute top-2 right-3 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white text-2xl font-light">&times;</button>
+            <h3 class="text-lg font-semibold mb-4">扫描二维码</h3>
+            <div id="qrcode-canvas" class="flex justify-center p-2 bg-white rounded-md"></div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">可以使用Google Authenticator扫描上方二维码把密钥添加至手机。</p>
+        </div>
+    </div>
+
+
     <script src="main.js"></script>
 
     <script>
@@ -44,7 +52,8 @@
             tools: pageTools,
             activeToolId: pageTools[0].id,
             desktopSidebar: null,
-            twoFaTimer: null, 
+            twoFaTimer: null,
+            currentTotpObject: null // To store the TOTP instance
         });
 
         App.init = function() {
@@ -70,6 +79,44 @@
                 this.state.desktopSidebar = null;
             }
         };
+        
+        // NEW: Function to show a toast notification
+        App.showToast = function(title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-item bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-4 rounded-lg shadow-lg mb-2 w-72';
+            toast.innerHTML = `<p class="font-semibold text-sm">${title}</p><p class="text-xs mt-1">${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        };
+
+        // NEW: Functions to control the QR Code Modal
+        App.openQrCodeModal = function() {
+            if (!this.state.currentTotpObject) {
+                alert('请先输入有效的密钥并点击“点击获取验证码”！');
+                return;
+            }
+            const qrCanvas = document.getElementById('qrcode-canvas');
+            qrCanvas.innerHTML = ''; // Clear previous QR code
+            
+            // Generate the otpauth:// URI
+            const uri = this.state.currentTotpObject.toString();
+
+            // Create a new QR Code
+            new QRCode(qrCanvas, {
+                text: uri,
+                width: 220,
+                height: 220,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            document.getElementById('qrcode-modal').style.display = 'flex';
+        };
+        App.closeQrCodeModal = function() {
+            document.getElementById('qrcode-modal').style.display = 'none';
+        };
+
 
         App.handle2FAGenerate = function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
@@ -83,22 +130,26 @@
             }
 
             try {
-                // CORRECTED: Changed 'otpauth' to 'OTPAuth'
                 const totp = new OTPAuth.TOTP({
-                    issuer: "ACME",
-                    label: "2FA Tool",
+                    issuer: "2FA工具",
+                    label: secret.slice(0, 16), // Use a portion of the secret as a label
                     algorithm: "SHA1",
                     digits: 6,
                     period: 30,
-                    // CORRECTED: Changed 'otpauth' to 'OTPAuth'
                     secret: OTPAuth.Secret.fromBase32(secret),
                 });
+                
+                this.state.currentTotpObject = totp; // Store the object for QR code generation
                 this.start2FATimer(totp);
+                document.getElementById('2fa-secret-display').textContent = secret;
+
             } catch (error) {
+                this.state.currentTotpObject = null;
                 console.error("Error generating TOTP:", error);
                 alert('密钥无效。请确保您输入的是正确的Base32编码密钥。');
                 document.getElementById('2fa-code').textContent = '密钥错误';
                 document.getElementById('2fa-time').textContent = '0';
+                document.getElementById('2fa-secret-display').textContent = '';
             }
         };
 
@@ -110,19 +161,23 @@
                 document.getElementById('2fa-code').textContent = token;
                 document.getElementById('2fa-time').textContent = remainingTime;
 
-                if (remainingTime === 30) {
-                    navigator.clipboard.writeText(token).then(() => {
-                        console.log('Code copied to clipboard!');
+                // Copy the code when it's first generated or refreshes
+                if (remainingTime === 30 || !this.state.twoFaTimer) {
+                     navigator.clipboard.writeText(token).then(() => {
+                        this.showToast("已成功获取验证码哦~", "已成功复制");
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
                     });
                 }
             };
             
-            update();
+            update(); // Run once immediately to generate and copy
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
 
         App.router = async function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
+            this.state.currentTotpObject = null;
             const appContainer = document.getElementById('app');
             const hash = window.location.hash.slice(1) || this.state.tools[0].id;
             
@@ -186,11 +241,11 @@
                     <button onclick="App.handle2FAGenerate()" class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-md hover:bg-green-600 transition-colors">点击获取验证码</button>
                     
                     <div class="mt-6 text-sm space-y-3 text-gray-700 dark:text-gray-300">
-                        <p>双重密钥为：</p>
+                        <p>双重密钥为：<span id="2fa-secret-display" class="font-mono"></span></p>
                         <p>当前验证码：<span id="2fa-code" class="font-bold text-lg text-red-500">------</span></p>
                         <div class="flex justify-between items-center">
                             <p>剩余时间： <span id="2fa-time">--</span> 秒</p>
-                            <button class="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-md hover:bg-blue-600 transition-colors">生成二维码</button>
+                            <button onclick="App.openQrCodeModal()" class="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-md hover:bg-blue-600 transition-colors">生成二维码</button>
                         </div>
                     </div>
 
