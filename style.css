@@ -58,10 +58,14 @@ body {
 
 
 /* --- tools.html specific --- */
-.tool-sidebar a.active {
-    background-color: #10b981; /* accent color */
-    color: white;
+/* Style for the active tool item in the sidebar */
+.tool-sidebar .tool-item.active .tool-icon-wrapper {
+    background-color: #059669; /* Darker green for active state */
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); /* Add a glow effect */
+    transform: scale(1.1); /* Slightly enlarge the active icon */
 }
-.tool-sidebar a.active i, .tool-sidebar a.active span {
-    color: white !important;
+
+.tool-sidebar .tool-item.active .tool-label {
+    color: #10b981; /* Make the label text green for active state */
+    font-weight: 600; /* Make text bold */
 }
