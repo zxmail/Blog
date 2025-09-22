@@ -167,25 +167,25 @@
             
             toolSidebar: () => `
                 <aside class="w-full md:w-52 flex-shrink-0">
-                    <nav class="tool-sidebar flex flex-row md:flex-col md:space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
-                        <a href="#" onclick="App.setActiveTool('2fa')" data-tool="2fa" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] active bg-accent text-white w-24 md:w-full flex-shrink-0 group">
-                            <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-green-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-user-shield text-2xl text-accent group-[.active]:text-white"></i></div>
+                    <nav class="tool-sidebar flex flex-row md:flex-col md:space-y-1 p-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+                        <a href="#" onclick="App.setActiveTool('2fa')" data-tool="2fa" class="flex flex-row items-center gap-3 p-3 rounded-[0.35rem] active bg-accent text-white w-auto md:w-full flex-shrink-0 group">
+                            <div class="w-8 h-8 flex items-center justify-center rounded-md bg-green-100 dark:bg-gray-700 group-[.active]:bg-white/20 flex-shrink-0"><i class="fas fa-user-shield text-lg text-accent group-[.active]:text-white"></i></div>
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">2FA工具</span>
                         </a>
-                        <a href="#" onclick="App.setActiveTool('qrcode')" data-tool="qrcode" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-green-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-qrcode text-2xl text-accent group-[.active]:text-white"></i></div>
+                        <a href="#" onclick="App.setActiveTool('qrcode')" data-tool="qrcode" class="flex flex-row items-center gap-3 p-3 rounded-[0.35rem] w-auto md:w-full flex-shrink-0 group">
+                            <div class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700 group-[.active]:bg-white/20 flex-shrink-0"><i class="fas fa-qrcode text-lg text-gray-500 dark:text-gray-400 group-[.active]:text-white"></i></div>
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">在线生成二维码</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-file-alt text-2xl text-gray-400"></i></div>
+                        <a href="#" class="flex flex-row items-center gap-3 p-3 rounded-[0.35rem] w-auto md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                            <div class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700 flex-shrink-0"><i class="fas fa-file-alt text-lg text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">文本处理</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-image text-2xl text-gray-400"></i></div>
+                        <a href="#" class="flex flex-row items-center gap-3 p-3 rounded-[0.35rem] w-auto md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                            <div class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700 flex-shrink-0"><i class="fas fa-image text-lg text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">图片处理</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-ellipsis-h text-2xl text-gray-400"></i></div>
+                        <a href="#" class="flex flex-row items-center gap-3 p-3 rounded-[0.35rem] w-auto md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                            <div class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700 flex-shrink-0"><i class="fas fa-ellipsis-h text-lg text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">更多工具</span>
                         </a>
                     </nav>
@@ -197,10 +197,11 @@
                     <h1 class="text-2xl font-bold mb-1">2FA验证</h1>
                     <p class="text-gray-500 dark:text-gray-400 mb-6">双重验证/二步验证码获取工具 (相当于谷歌身份验证器的网页版)，使用时选择您的方式输入密钥即可。</p>
                     
-                    <div class="mb-4">
-                        <input id="2fa-key-input" type="text" placeholder="点击此处输入密钥" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-[0.35rem] focus:outline-none focus:border-accent dark:bg-gray-700">
+                    <div class="relative flex items-center w-full border-2 border-gray-200 dark:border-gray-600 focus-within:border-accent rounded-[0.35rem] p-1.5" id="input-container">
+                        <button onclick="App.update2FACode()" class="flex-shrink-0 bg-accent text-white font-bold px-3 py-1.5 rounded-[0.35rem] hover:opacity-90 text-xs">点击获取验证码</button>
+                        <input id="2fa-key-input" type="text" placeholder="点击此处输入密钥" class="flex-grow w-full border-none bg-transparent focus:ring-0 text-gray-700 dark:text-gray-200 px-3">
+                        <button onclick="App.generateAndShow2FAQRCode()" class="flex-shrink-0 bg-accent text-white font-bold px-3 py-1.5 rounded-[0.35rem] hover:opacity-90 text-xs">生成二维码</button>
                     </div>
-                    <button onclick="App.update2FACode()" class="bg-accent text-white font-bold px-5 py-2.5 rounded-[0.35rem] hover:opacity-90 text-sm">点击获取验证码</button>
                     
                     <div class="mt-6 space-y-3 text-sm">
                         <p><strong>双重密钥为:</strong> <span id="2fa-key-display" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">...</span></p>
@@ -212,10 +213,6 @@
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                             <div id="2fa-progress" class="bg-accent h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
                         </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <button onclick="App.generateAndShow2FAQRCode()" class="bg-gray-600 text-white font-bold px-5 py-2.5 rounded-[0.35rem] hover:bg-gray-700 text-sm">生成二维码</button>
                     </div>
 
                     <hr class="my-8 dark:border-gray-700">
