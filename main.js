@@ -225,7 +225,7 @@ const App = {
                                 </div>
                             </div>
                             <div class="text-center md:text-left">
-                                <span>Copyright © ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
+                                <span>Copyright ? ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
                             </div>
                         </div>
                     </div>
