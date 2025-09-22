@@ -83,14 +83,15 @@
             }
 
             try {
-                // Using the correct API call for v9+ of the library
-                const totp = new otpauth.TOTP({
+                // CORRECTED: Changed 'otpauth' to 'OTPAuth'
+                const totp = new OTPAuth.TOTP({
                     issuer: "ACME",
                     label: "2FA Tool",
                     algorithm: "SHA1",
                     digits: 6,
                     period: 30,
-                    secret: otpauth.Secret.fromBase32(secret),
+                    // CORRECTED: Changed 'otpauth' to 'OTPAuth'
+                    secret: OTPAuth.Secret.fromBase32(secret),
                 });
                 this.start2FATimer(totp);
             } catch (error) {
