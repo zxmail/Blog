@@ -3,333 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工具 - 我的博客</title>
+    <title>工具箱 - 我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
     <script>
-        tailwind.config = { darkMode: 'class' };
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'accent': '#10b981', // Accent color (green)
+                    },
+                },
+            },
+        };
     </script>
     <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .content-area { font-size: 15px; line-height: 1.7; color: #606266; }
-        .dark .content-area { color: #d1d5db; }
-        .content-area a { color: #3b82f6; text-decoration: underline; }
-        .dark .content-area a { color: #60a5fa; }
-        #back-to-top { position: fixed; bottom: 20%; right: 2rem; display: none; width: 38px; height: 38px; border-radius: 3px; background-color: rgb(188 188 188); color: #1e1e1e; transition: background-color: 0.3s ease, color: 0.3s ease; }
-        #back-to-top:hover { background-color: rgb(123 123 123); color: #fff; }
-        #back-to-top i { font-size: 15px; font-weight: 400; }
-        body { background-color: #f5f5f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f3f4f6; }
         .dark body { background-color: #111827; }
-        .divide-gray-200 > :not([hidden]) ~ :not([hidden]), .border-gray-200 { border-color: rgb(245 245 245 / 1) !important; }
-        .dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]), .dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
-        .rounded-lg { border-radius: 0.2rem !important; }
-        .rounded-md { border-radius: 0.1rem !important; }
-        .swiper-button-next, .swiper-button-prev { color: #ffffff; background-color: rgba(0,0,0,0.25); width: 44px; height: 44px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease, background-color: 0.3s ease; }
-        .swiper:hover .swiper-button-next, .swiper:hover .swiper-button-prev { opacity: 1; }
-        .swiper-button-next:hover, .swiper-button-prev:hover { background-color: rgba(0,0,0,0.4); }
-        .swiper-button-next:after, .swiper-button-prev:after { font-size: 20px; font-weight: bold; }
-        .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
-        .swiper-pagination-bullet-active { background-color: #ffffff; }
-        .group .dropdown-menu { display: none; }
-        .group:hover > .dropdown-menu { display: block; }
-        .dropdown-menu .sub-menu { display: none; }
-        .dropdown-menu li:hover > .sub-menu { display: block; }
-        .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
-        .sub-menu { top: -0.25rem; left: 100%; }
-        #sidebar-menu .rotate-90 { transform: rotate(90deg); }
-        #sidebar-menu { font-size: 13px; }
-
-        @media (max-width: 639.98px) {
-            body .p-4 {
-                padding: 0.5rem;
-            }
-            body .p-6 {
-                padding: 0.9rem;
-            }
-        }
+        .tool-sidebar a.active { background-color: #10b981; color: white; }
+        .dark .tool-sidebar a.active { background-color: #10b981; }
+        .progress-bar { transform-origin: left; transition: transform 0.2s linear; }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
 
-    <div id="app" class="flex flex-col min-h-screen"></div>
-    <div id="sidebar-container"></div>
-    <div id="search-modal-container"></div>
-    
-    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center">
-      <i class="far fa-arrow-up"></i>
-    </button>
+    <div id="app" class="flex h-screen">
+        </div>
 
     <script>
         const App = {
-            config: {
-                workerUrl: 'https://blog.xy193.workers.dev'
-            },
             state: {
-                navItems: [],
-                friendlyLinks: [],
-                siteStats: null,
-                siteSettings: null,
                 theme: localStorage.getItem('theme') || 'light',
-            },
-            helpers: {
-                renderIcon: (iconString) => {
-                    if (!iconString) return '<i class="fa-fw"></i>';
-                    if (iconString.trim().startsWith('<svg')) return iconString;
-                    return `<i class="${iconString} fa-fw"></i>`;
+                activeTool: '2fa', // Default tool to show
+                totp: {
+                    interval: null,
+                    code: '------',
+                    timeLeft: 0,
                 }
             },
             init() {
                 this.applyTheme();
-                this.renderMobileSidebar();
-                this.renderSearchModal();
-                this.renderPage(); // Simplified page renderer
-                window.addEventListener('scroll', () => this.handleScroll());
+                this.renderPage();
+                this.runActiveToolLogic();
             },
-            async renderPage() {
-                // Fetch all necessary data for header/footer
-                await Promise.all([ 
-                    this.fetchNavIfNeeded(), 
-                    this.fetchFriendlyLinksIfNeeded(), 
-                    this.fetchSiteStatsIfNeeded(), 
-                    this.fetchSiteSettingsIfNeeded() 
-                ]);
-
-                // Render the page with the tools content
-                document.getElementById('app').innerHTML = this.templates.mainLayout(this.templates.toolsPage());
-                
-                // Set the title and re-render mobile sidebar with fetched nav data
-                document.title = (this.state.siteSettings?.blogName || '我的博客') + ' - 工具';
-                this.renderMobileSidebar();
+            applyTheme() {
+                if (this.state.theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
             },
-
-            applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
-            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderMobileSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
-            
-            // --- Mobile Sidebar & Search Modal Methods ---
-            renderMobileSidebar() {
-                 document.getElementById('sidebar-container').innerHTML = this.templates.mobileSidebar();
+            toggleTheme() {
+                this.state.theme = this.state.theme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('theme', this.state.theme);
+                this.applyTheme();
             },
-            openSidebar() {
-                document.getElementById('sidebar-overlay')?.classList.remove('hidden');
-                document.getElementById('sidebar-menu')?.classList.remove('-translate-x-full');
-            },
-            closeSidebar() {
-                document.getElementById('sidebar-overlay')?.classList.add('hidden');
-                document.getElementById('sidebar-menu')?.classList.add('-translate-x-full');
-            },
-            toggleSubMenu(event) {
-                const parentLi = event.target.closest('li');
-                const subMenu = parentLi?.querySelector('ul');
-                const arrow = parentLi?.querySelector('i.fa-chevron-right');
-                if (subMenu) {
-                    subMenu.classList.toggle('hidden');
-                    arrow?.classList.toggle('rotate-90');
-                }
-            },
-            renderSearchModal() {
-                document.getElementById('search-modal-container').innerHTML = this.templates.searchModal();
-            },
-            openSearchModal() {
-                const modal = document.getElementById('search-modal');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    modal.querySelector('input[name="query"]')?.focus();
-                }
-            },
-            closeSearchModal() {
-                document.getElementById('search-modal')?.classList.add('hidden');
-            },
-            
-            // This function is now used inside the search modal, it needs to redirect to index.html
-            handleSearchSubmit(event) {
+            switchTool(toolName, event) {
                 event.preventDefault();
-                const query = event.target.querySelector('[name="query"]').value.trim();
-                if (query) {
-                    window.location.href = `index.html#/search/${encodeURIComponent(query)}`;
+                this.state.activeTool = toolName;
+                this.renderPage();
+                this.runActiveToolLogic();
+            },
+            runActiveToolLogic() {
+                // Clear any previous intervals
+                if (this.state.totp.interval) clearInterval(this.state.totp.interval);
+                
+                if (this.state.activeTool === '2fa') {
+                    document.getElementById('generate-2fa-btn')?.addEventListener('click', () => this.generate2FA());
+                } else if (this.state.activeTool === 'qrcode') {
+                    const qrInput = document.getElementById('qr-input');
+                    qrInput?.addEventListener('input', () => this.generateQRCode(qrInput.value));
+                    this.generateQRCode(qrInput.value); // Initial generation
                 }
-                this.closeSearchModal();
+            },
+            
+            // --- 2FA Tool Logic ---
+            generate2FA() {
+                const secretKey = document.getElementById('2fa-secret').value.replace(/\s/g, '').toUpperCase();
+                if (!secretKey) {
+                    alert('请输入2FA密钥!');
+                    return;
+                }
+                
+                if (this.state.totp.interval) clearInterval(this.state.totp.interval);
+
+                const updateTOTP = () => {
+                    try {
+                        const epoch = Math.floor(Date.now() / 1000);
+                        this.state.totp.timeLeft = 30 - (epoch % 30);
+                        this.state.totp.code = this.getTOTP(secretKey);
+
+                        document.getElementById('totp-code').textContent = this.state.totp.code;
+                        document.getElementById('totp-timer').textContent = `${this.state.totp.timeLeft} 秒`;
+                        const progressBar = document.getElementById('totp-progress');
+                        progressBar.style.transform = `scaleX(${this.state.totp.timeLeft / 30})`;
+                        
+                        if (this.state.totp.timeLeft < 6) {
+                            progressBar.classList.remove('bg-accent');
+                            progressBar.classList.add('bg-red-500');
+                        } else {
+                            progressBar.classList.remove('bg-red-500');
+                            progressBar.classList.add('bg-accent');
+                        }
+
+                    } catch (e) {
+                        console.error("2FA Error:", e);
+                        clearInterval(this.state.totp.interval);
+                        alert('密钥无效或格式错误，请检查。');
+                    }
+                };
+
+                updateTOTP(); // Initial call
+                this.state.totp.interval = setInterval(updateTOTP, 1000);
+            },
+            getTOTP(secret) {
+                const key = this.base32tohex(secret);
+                const epoch = Math.floor(Date.now() / 1000.0);
+                const time = this.leftpad(Math.floor(epoch / 30).toString(16), 16, '0');
+                
+                const hmac = CryptoJS.HmacSHA1(CryptoJS.enc.Hex.parse(time), CryptoJS.enc.Hex.parse(key));
+                const offset = parseInt(hmac.toString().substring(hmac.toString().length - 1), 16);
+                const otp = (parseInt(hmac.toString().substring(offset * 2, offset * 2 + 8), 16) & 0x7fffffff) + '';
+                return otp.substring(otp.length - 6, otp.length);
+            },
+            base32tohex(base32) {
+                const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+                let bits = "";
+                let hex = "";
+                for (let i = 0; i < base32.length; i++) {
+                    const val = base32chars.indexOf(base32.charAt(i).toUpperCase());
+                    bits += this.leftpad(val.toString(2), 5, '0');
+                }
+                for (let i = 0; i + 4 <= bits.length; i += 4) {
+                    const chunk = bits.substr(i, 4);
+                    hex += parseInt(chunk, 2).toString(16);
+                }
+                return hex;
+            },
+            leftpad(str, len, pad) {
+                if (len + 1 >= str.length) {
+                    str = Array(len + 1 - str.length).join(pad) + str;
+                }
+                return str;
             },
 
-            // Simplified data fetching
-            async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: '#/' }]; } },
-            async fetchFriendlyLinksIfNeeded() { if (this.state.friendlyLinks.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/links`); this.state.friendlyLinks = await res.json(); } catch (e) {} },
-            async fetchSiteStatsIfNeeded(forceRefresh = false) { if (!this.state.siteStats || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/stats`); this.state.siteStats = await res.json(); } catch (e) {} },
-            async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} },
-            handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
-            
-            templates: {
-                header: () => {
-                    const renderMenuItems = (items) => {
-                        return `<ul class="list-none">${items.map(item => {
-                            const hasChildren = item.children && item.children.length > 0;
-                            return `<li class="relative group"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
-                        }).join('')}</ul>`;
-                    };
-                    const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
-                        const hasChildren = item.children && item.children.length > 0;
-                        return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
-                    }).join('')}</nav>`;
-                    
-                    const settings = App.state.siteSettings;
-                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
-                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[40px] w-auto">` : '';
-                    const blogName = settings?.blogName || '';
-                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
+            // --- QR Code Tool Logic ---
+            generateQRCode(text) {
+                const qrContainer = document.getElementById('qr-code-container');
+                if (!qrContainer) return;
+                qrContainer.innerHTML = ''; // Clear previous QR code
+                try {
+                    const typeNumber = 0; // Auto-detect
+                    const errorCorrectionLevel = 'L';
+                    const qr = qrcode(typeNumber, errorCorrectionLevel);
+                    qr.addData(text || ' '); // Add a space if empty to avoid errors
+                    qr.make();
+                    qrContainer.innerHTML = qr.createImgTag(6, 8); // (cellSize, margin)
+                    qrContainer.firstChild.classList.add('w-full', 'h-auto');
+                } catch (e) {
+                    console.error("QR Code Error:", e);
+                    qrContainer.textContent = '生成二维码失败。';
+                }
+            },
 
-                    return `<header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6">
-                            <div class="flex justify-between items-center h-[50px] md:h-[62px]">
-                                <div class="hidden md:flex flex-1 items-center gap-4">
-                                    <a href="index.html" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>
-                                    ${renderTopLevelMenu(App.state.navItems)}
-                                </div>
-                                <div class="hidden md:flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
-                                    <button onclick="App.openSearchModal()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
-                                    <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
-                                    <a href="admin.html" class="text-sm hover:underline">登录</a>
-                                </div>
-                                <div class="md:hidden flex flex-1 w-full justify-between items-center">
-                                    <div class="flex-1 text-left">
-                                        <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-base font-medium"></i></button>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        <a href="index.html" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
-                                    </div>
-                                    <div class="flex-1 text-right">
-                                         <button onclick="App.openSearchModal()" class="p-2 -mr-2"><i class="fas fa-search text-base font-medium"></i></button>
-                                    </div>
-                                </div>
-                            </div>
+            renderPage() {
+                document.getElementById('app').innerHTML = this.templates.mainLayout();
+            },
+
+            templates: {
+                mainLayout: () => `
+                    ${App.templates.sidebar()}
+                    <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+                        ${App.templates.toolContent()}
+                    </main>
+                `,
+                sidebar: () => `
+                    <aside class="w-24 bg-white dark:bg-gray-800 flex-shrink-0 flex flex-col items-center py-6 space-y-6">
+                        <div class="text-accent text-2xl font-bold">
+                           <a href="index.html"><i class="fas fa-home"></i></a>
                         </div>
-                    </header>`;
-                },
-                mobileSidebar: () => {
-                    const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
-                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
-                    return `
-                        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" onclick="App.closeSidebar()"></div>
-                        <nav id="sidebar-menu" class="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-                            <div class="flex justify-between items-center p-4 border-b dark:border-gray-700">
-                                <h2 class="font-bold text-lg">菜单</h2>
-                                <button onclick="App.closeSidebar()" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
-                                    <i class="fas fa-times text-xl"></i>
-                                </button>
-                            </div>
-                            <div class="flex-grow p-2 space-y-1 overflow-y-auto">
-                                ${navItemsHtml}
-                            </div>
-                            <div class="p-2 border-t dark:border-gray-700 space-y-1">
-                                <button onclick="App.toggleTheme()" class="w-full flex items-center gap-3 p-3 rounded-md text-left hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
-                                <a href="admin.html" class="w-full flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-user-circle fa-fw"></i> <span>登录</span></a>
-                            </div>
+                        <nav class="tool-sidebar flex flex-col items-center space-y-4">
+                            <a href="#" onclick="App.switchTool('2fa', event)" class="${App.state.activeTool === '2fa' ? 'active' : ''} flex flex-col items-center text-center text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent transition-colors p-2 rounded-lg">
+                                <i class="fas fa-shield-check text-2xl mb-1"></i>
+                                <span class="text-xs font-medium">2FA工具</span>
+                            </a>
+                            <a href="#" onclick="App.switchTool('qrcode', event)" class="${App.state.activeTool === 'qrcode' ? 'active' : ''} flex flex-col items-center text-center text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent transition-colors p-2 rounded-lg">
+                                <i class="fas fa-qrcode text-2xl mb-1"></i>
+                                <span class="text-xs font-medium">二维码生成</span>
+                            </a>
                         </nav>
-                    `;
+                        <div class="mt-auto">
+                           <button onclick="App.toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-accent dark:hover:text-accent text-2xl">
+                              <i class="${App.state.theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'}"></i>
+                           </button>
+                        </div>
+                    </aside>
+                `,
+                toolContent: () => {
+                    if (App.state.activeTool === '2fa') return App.templates.tool2FA();
+                    if (App.state.activeTool === 'qrcode') return App.templates.toolQRCode();
+                    return `<div>请选择一个工具</div>`;
                 },
-                mobileSidebarMenuItems: (items) => {
-                    return `<ul class="space-y-1">${items.map(item => {
-                        const hasChildren = item.children && item.children.length > 0;
-                        return `
-                            <li>
-                                <div class="flex justify-between items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                    <a href="${hasChildren ? 'javascript:void(0)' : item.url}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
-                                        ${App.helpers.renderIcon(item.icon)}
-                                        <span>${item.label}</span>
-                                    </a>
-                                    ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
-                                </div>
-                                ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.mobileSidebarMenuItems(item.children)}</ul>` : ''}
-                            </li>
-                        `;
-                    }).join('')}</ul>`;
-                },
-                searchModal: () => `
-                    <div id="search-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4" onclick="App.closeSearchModal()">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative" onclick="event.stopPropagation()">
-                            <button onclick="App.closeSearchModal()" class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                            <h3 class="text-lg font-semibold mb-4">搜索文章</h3>
-                            <form onsubmit="App.handleSearchSubmit(event)">
-                                <div class="relative">
-                                    <input type="search" name="query" placeholder="请输入关键词..." class="w-full pl-5 pr-12 py-3 border-2 dark:border-gray-600 rounded-lg dark:bg-gray-700 focus:outline-none focus:border-gray-500" autofocus>
-                                    <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">
-                                        <i class="fal fa-search"></i>
-                                    </button>
-                                </div>
-                            </form>
+                tool2FA: () => `
+                    <div class="max-w-3xl mx-auto">
+                        <h1 class="text-2xl font-bold mb-2">2FA 验证</h1>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">双因素验证(2FA)动态密码获取工具，请将密钥信息粘贴到输入框即可获取。</p>
+                        
+                        <div class="mb-4">
+                            <input id="2fa-secret" type="text" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" placeholder="请输入2FA密钥 (Secret Key)">
+                        </div>
+                        
+                        <button id="generate-2fa-btn" class="bg-accent text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-90">点击获取验证码</button>
+                        
+                        <div class="mt-6 p-4 border-t dark:border-gray-700">
+                           <p class="text-sm text-gray-500 dark:text-gray-400">当前验证码：<span id="totp-code" class="font-mono text-2xl font-bold text-red-500 tracking-widest ml-2">${App.state.totp.code}</span></p>
+                           <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">剩余时间：<span id="totp-timer">${App.state.totp.timeLeft} 秒</span></p>
+                           <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                               <div id="totp-progress" class="bg-accent h-2 rounded-full progress-bar" style="transform: scaleX(0);"></div>
+                           </div>
                         </div>
                     </div>
                 `,
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6">${content}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
-
-                footer: () => {
-                    const stats = App.state.siteStats || {};
-                    const contactsHtml = (stats.custom_contacts || []).map(contact => 
-                        `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
-                    ).join('');
-
-                    return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6">
-                            <div class="py-8">
-                                <div class="flex flex-col items-center md:items-start space-y-[3px]">
-                                    <div class="hidden md:flex items-center">
-                                        <span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span>
-                                        <div class="flex items-center ml-2 space-x-[10px]">${contactsHtml}</div>
+                toolQRCode: () => `
+                     <div class="max-w-3xl mx-auto">
+                        <h1 class="text-2xl font-bold mb-2">在线生成二维码 (QR Code)</h1>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">在下方文本框中输入任何文本或网址，将即时生成二维码。</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 items-start">
+                            <div>
+                                <label for="qr-input" class="block text-sm font-medium mb-1">输入内容</label>
+                                <textarea id="qr-input" rows="8" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" placeholder="输入文本或网址..."></textarea>
+                            </div>
+                            <div class="text-center">
+                                <label class="block text-sm font-medium mb-1">生成的二维码</label>
+                                <div id="qr-code-container" class="p-4 border dark:border-gray-600 rounded-md bg-white w-full max-w-[256px] mx-auto">
                                     </div>
-                                    <div class="hidden md:flex items-center">
-                                        <span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span>
-                                        <div class="flex items-center ml-2 space-x-[5px]">
-                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span>
-                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span>
-                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="text-center md:text-left">
-                                        <span>Copyright © ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
-                                    </div>
-                                </div>
+                                <p class="text-xs text-gray-400 mt-2">可右键点击图片保存</p>
                             </div>
                         </div>
-                    </footer>`;
-                },
-                friendlyLinksSection: () => {
-                    if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
-                    return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`;
-                },
-                // --- New Template for the Tools Page Content ---
-                toolsPage: () => {
-                    return `
-                        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                            <h1 class="text-2xl font-bold mb-6">工具箱</h1>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-                                    <div class="text-4xl mb-3"><i class="fas fa-calculator-alt"></i></div>
-                                    <h2 class="font-semibold mb-2">工具名称 1</h2>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
-                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
-                                </div>
-                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-                                    <div class="text-4xl mb-3"><i class="fas fa-palette"></i></div>
-                                    <h2 class="font-semibold mb-2">工具名称 2</h2>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
-                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
-                                </div>
-                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-                                    <div class="text-4xl mb-3"><i class="fas fa-file-code"></i></div>
-                                    <h2 class="font-semibold mb-2">工具名称 3</h2>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
-                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
-                                </div>
-                                </div>
-                        </div>
-                    `;
-                }
+                    </div>
+                `,
             }
         };
         
