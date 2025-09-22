@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的博客</title>
+    <title>工具 - 我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -72,6 +72,7 @@
             },
             state: {
                 navItems: [],
+                friendlyLinks: [],
                 siteStats: null,
                 siteSettings: null,
                 theme: localStorage.getItem('theme') || 'light',
@@ -87,9 +88,26 @@
                 this.applyTheme();
                 this.renderMobileSidebar();
                 this.renderSearchModal();
-                window.addEventListener('load', () => this.router());
+                this.renderPage(); // Simplified page renderer
                 window.addEventListener('scroll', () => this.handleScroll());
             },
+            async renderPage() {
+                // Fetch all necessary data for header/footer
+                await Promise.all([ 
+                    this.fetchNavIfNeeded(), 
+                    this.fetchFriendlyLinksIfNeeded(), 
+                    this.fetchSiteStatsIfNeeded(), 
+                    this.fetchSiteSettingsIfNeeded() 
+                ]);
+
+                // Render the page with the tools content
+                document.getElementById('app').innerHTML = this.templates.mainLayout(this.templates.toolsPage());
+                
+                // Set the title and re-render mobile sidebar with fetched nav data
+                document.title = (this.state.siteSettings?.blogName || '我的博客') + ' - 工具';
+                this.renderMobileSidebar();
+            },
+
             applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
             toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderMobileSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
             
@@ -128,28 +146,19 @@
                 document.getElementById('search-modal')?.classList.add('hidden');
             },
             
-            async router() {
-                const appContainer = document.getElementById('app');
-                // Fetch data needed for header and footer
-                await Promise.all([ this.fetchNavIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
-                
-                // Directly render the tools page
-                appContainer.innerHTML = this.templates.mainLayout(this.templates.toolsPage());
-                
-                document.title = `工具箱 - ${this.state.siteSettings?.blogName || '我的博客'}`;
-                this.renderMobileSidebar();
-            },
+            // This function is now used inside the search modal, it needs to redirect to index.html
             handleSearchSubmit(event) {
                 event.preventDefault();
                 const query = event.target.querySelector('[name="query"]').value.trim();
-                // Redirect to the main blog page for search results
                 if (query) {
                     window.location.href = `index.html#/search/${encodeURIComponent(query)}`;
                 }
                 this.closeSearchModal();
             },
-            // --- Data Fetching Methods ---
+
+            // Simplified data fetching
             async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: '#/' }]; } },
+            async fetchFriendlyLinksIfNeeded() { if (this.state.friendlyLinks.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/links`); this.state.friendlyLinks = await res.json(); } catch (e) {} },
             async fetchSiteStatsIfNeeded(forceRefresh = false) { if (!this.state.siteStats || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/stats`); this.state.siteStats = await res.json(); } catch (e) {} },
             async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} },
             handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
@@ -200,7 +209,6 @@
                         </div>
                     </header>`;
                 },
-
                 mobileSidebar: () => {
                     const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
@@ -258,8 +266,8 @@
                         </div>
                     </div>
                 `,
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6">${content}</main>${App.templates.footer()}</div>`,
-                
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6">${content}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+
                 footer: () => {
                     const stats = App.state.siteStats || {};
                     const contactsHtml = (stats.custom_contacts || []).map(contact => 
@@ -290,42 +298,38 @@
                         </div>
                     </footer>`;
                 },
-                
-                // --- New Template for the Tools Page ---
-                toolsPage: () => `
-                    <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h1 class="text-2xl font-bold mb-6">工具箱</h1>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <a href="#" class="block p-6 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-file-code text-3xl text-blue-500"></i>
-                                    <div>
-                                        <h2 class="font-semibold text-lg">JSON 格式化</h2>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">格式化、校验和美化您的JSON数据。</p>
-                                    </div>
+                friendlyLinksSection: () => {
+                    if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
+                    return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`;
+                },
+                // --- New Template for the Tools Page Content ---
+                toolsPage: () => {
+                    return `
+                        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                            <h1 class="text-2xl font-bold mb-6">工具箱</h1>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                                    <div class="text-4xl mb-3"><i class="fas fa-calculator-alt"></i></div>
+                                    <h2 class="font-semibold mb-2">工具名称 1</h2>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
+                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
                                 </div>
-                            </a>
-                            <a href="#" class="block p-6 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-clock text-3xl text-green-500"></i>
-                                    <div>
-                                        <h2 class="font-semibold text-lg">时间戳转换</h2>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">在Unix时间戳和标准日期格式之间转换。</p>
-                                    </div>
+                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                                    <div class="text-4xl mb-3"><i class="fas fa-palette"></i></div>
+                                    <h2 class="font-semibold mb-2">工具名称 2</h2>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
+                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
                                 </div>
-                            </a>
-                            <a href="#" class="block p-6 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-palette text-3xl text-purple-500"></i>
-                                    <div>
-                                        <h2 class="font-semibold text-lg">颜色选择器</h2>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">从调色板中选择颜色并获取HEX/RGB值。</p>
-                                    </div>
+                                <div class="border dark:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                                    <div class="text-4xl mb-3"><i class="fas fa-file-code"></i></div>
+                                    <h2 class="font-semibold mb-2">工具名称 3</h2>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">这里是这个工具的简短描述，说明它的用途。</p>
+                                    <a href="#" class="mt-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">使用工具</a>
                                 </div>
-                            </a>
-                             </div>
-                    </div>
-                `
+                                </div>
+                        </div>
+                    `;
+                }
             }
         };
         
