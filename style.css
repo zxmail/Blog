@@ -58,14 +58,28 @@ body {
 
 
 /* --- tools.html specific --- */
-/* Style for the active tool item in the sidebar */
 .tool-sidebar .tool-item.active .tool-icon-wrapper {
     background-color: #059669; /* Darker green for active state */
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); /* Add a glow effect */
     transform: scale(1.1); /* Slightly enlarge the active icon */
 }
-
 .tool-sidebar .tool-item.active .tool-label {
     color: #10b981; /* Make the label text green for active state */
     font-weight: 600; /* Make text bold */
+}
+
+/* NEW: Toast Notification Animation */
+.toast-item {
+    animation: toast-in-right 0.5s, toast-out-right 0.5s 2.5s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes toast-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toast-out-right {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
 }
