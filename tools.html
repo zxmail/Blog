@@ -42,7 +42,8 @@
     <script>
         const pageTools = [
             { id: '2fa', name: '2FA工具', icon: 'fas fa-shield-check', template: 'tool2FAContent' },
-            { id: 'qrcode', name: '在线生成二维码', icon: 'fas fa-qrcode', template: 'toolComingSoonContent' },
+            // UPDATED: Pointing to the new QR code template
+            { id: 'qrcode', name: '在线生成二维码', icon: 'fas fa-qrcode', template: 'toolQRCodeContent' },
             { id: 'text', name: '文本处理', icon: 'fas fa-file-alt', template: 'toolComingSoonContent' },
             { id: 'image', name: '图片处理', icon: 'fas fa-image', template: 'toolComingSoonContent' },
             { id: 'more', name: '更多工具', icon: 'fas fa-ellipsis-h', template: 'toolComingSoonContent' }
@@ -121,7 +122,6 @@
             const secretInput = document.getElementById('2fa-secret');
             const secret = secretInput.value.trim().replace(/\s/g, '');
 
-            // UPDATED: Changed alert to inline text
             if (!secret) {
                 document.getElementById('2fa-code').textContent = '请输入密钥！';
                 document.getElementById('2fa-time').textContent = '--';
@@ -149,7 +149,6 @@
                 document.getElementById('2fa-code').textContent = '密钥错误';
                 document.getElementById('2fa-time').textContent = '0';
                 document.getElementById('2fa-secret-display').textContent = '';
-                // No alert here either for consistency
             }
         };
 
@@ -173,6 +172,30 @@
             update();
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
+        
+        // NEW: Function to generate the QR Code for the QR tool
+        App.handleGenerateQRCode = function() {
+            const text = document.getElementById('qr-text-input').value;
+            const errorLevel = document.getElementById('qr-error-level').value;
+            let size = parseInt(document.getElementById('qr-size').value, 10);
+            const outputDiv = document.getElementById('qr-code-output');
+
+            outputDiv.innerHTML = ''; // Clear previous QR code
+            
+            if (!text) {
+                return; // Do nothing if text is empty
+            }
+            if (isNaN(size) || size < 50) {
+                size = 200; // Default size
+            }
+
+            new QRCode(outputDiv, {
+                text: text,
+                width: size,
+                height: size,
+                correctLevel: QRCode.CorrectLevel[errorLevel]
+            });
+        };
 
         App.router = async function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
@@ -194,6 +217,11 @@
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
             
             this.initStickySidebar();
+
+            // If the active tool is the QR code generator, trigger an initial generation
+            if (this.state.activeToolId === 'qrcode') {
+                this.handleGenerateQRCode();
+            }
         };
 
         Object.assign(App.templates, {
@@ -257,6 +285,40 @@
                         </div>
                     </div>
                      <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
+                </div>
+            `,
+            // NEW: Template for the QR Code Generator tool
+            toolQRCodeContent: () => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold mb-6">在线生成二维码(QR码)</h2>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="w-full md:w-1/2">
+                            <label for="qr-text-input" class="block text-sm font-medium mb-2">URL或其他文本:</label>
+                            <textarea id="qr-text-input" onkeyup="App.handleGenerateQRCode()" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="http://qr.xyrj.us.kg"></textarea>
+                        </div>
+
+                        <div class="w-full md:w-1/2 flex gap-4">
+                            <div class="flex-grow space-y-3">
+                                <div>
+                                    <label for="qr-error-level" class="block text-xs font-medium mb-1">纠错级别:</label>
+                                    <select id="qr-error-level" onchange="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                        <option value="L">L (7%)</option>
+                                        <option value="M" selected>M (15%)</option>
+                                        <option value="Q">Q (25%)</option>
+                                        <option value="H">H (30%)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
+                                    <input type="number" id="qr-size" value="200" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                </div>
+                                <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
+                            </div>
+                            <div class="w-48 h-48 flex-shrink-0 border rounded-md p-2 flex items-center justify-center dark:bg-white">
+                                <div id="qr-code-output"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `,
             toolComingSoonContent: () => `
