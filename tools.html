@@ -33,8 +33,8 @@
     <script>
         // Define the toolset for this page
         const pageTools = [
-            { id: '2fa', name: '2FA验证', icon: 'fas fa-shield-check', template: 'tool2FAContent' },
-            { id: 'qrcode', name: '在线生成二维码', icon: 'fas fa-qrcode', template: 'toolComingSoonContent' },
+            { id: '2fa', name: '2FA工具', icon: 'fas fa-shield-check', template: 'tool2FAContent' },
+            { id: 'qrcode', name: '在线生成二维码(QR码)', icon: 'fas fa-qrcode', template: 'toolComingSoonContent' },
             { id: 'text', name: '文本处理', icon: 'fas fa-file-alt', template: 'toolComingSoonContent' },
             { id: 'image', name: '图片处理', icon: 'fas fa-image', template: 'toolComingSoonContent' },
             { id: 'more', name: '更多工具', icon: 'fas fa-ellipsis-h', template: 'toolComingSoonContent' }
@@ -61,11 +61,9 @@
             const appContainer = document.getElementById('app');
             const hash = window.location.hash.slice(1) || this.state.tools[0].id;
             
-            // Check if the tool exists, otherwise default to the first one
             const toolExists = this.state.tools.some(t => t.id === hash);
             this.state.activeToolId = toolExists ? hash : this.state.tools[0].id;
             
-            // Fetch data required for shared components like header and footer
             await Promise.all([ 
                 this.fetchNavIfNeeded(), 
                 this.fetchFriendlyLinksIfNeeded(), 
@@ -73,7 +71,6 @@
                 this.fetchSiteSettingsIfNeeded() 
             ]);
             
-            // Render the entire page layout
             appContainer.innerHTML = this.templates.mainLayout();
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
         };
@@ -84,11 +81,11 @@
                 <div class="flex-grow">
                     ${App.templates.header()}
                     <main class="max-w-7xl mx-auto w-full p-4 sm:px-6">
-                        <div class="lg:flex gap-6">
-                            <div class="w-full lg:w-1/5 mb-6 lg:mb-0 flex-shrink-0">
+                        <div class="flex flex-col lg:flex-row gap-6">
+                            <div class="w-full lg:w-1/5 lg:max-w-[220px] flex-shrink-0">
                                 ${App.templates.toolSidebar()}
                             </div>
-                            <div class="w-full lg:w-4/5">
+                            <div class="w-full">
                                 ${App.templates[App.state.tools.find(t => t.id === App.state.activeToolId).template]()}
                             </div>
                         </div>
@@ -98,17 +95,17 @@
                 ${App.templates.footer()}
             `,
             toolSidebar: () => `
-                <aside class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 tool-sidebar">
-                    <ul class="space-y-1">
+                <aside class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 tool-sidebar">
+                    <div class="flex flex-row lg:flex-col items-center justify-center gap-4">
                         ${App.state.tools.map(tool => `
-                            <li>
-                                <a href="#${tool.id}" class="flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${tool.id === App.state.activeToolId ? 'active' : ''}">
-                                    <i class="${tool.icon} w-5 text-center text-gray-500"></i>
-                                    <span class="font-medium text-sm text-gray-700 dark:text-gray-300">${tool.name}</span>
-                                </a>
-                            </li>
+                            <a href="#${tool.id}" class="tool-item flex flex-col items-center justify-center gap-2 text-center w-20 ${tool.id === App.state.activeToolId ? 'active' : ''}">
+                                <div class="tool-icon-wrapper w-14 h-14 bg-green-500 rounded-lg flex items-center justify-center shadow-md transition-transform duration-200 hover:scale-110 hover:shadow-lg">
+                                    <i class="${tool.icon} text-white text-2xl"></i>
+                                </div>
+                                <span class="tool-label text-xs font-medium text-gray-600 dark:text-gray-400">${tool.name}</span>
+                            </a>
                         `).join('')}
-                    </ul>
+                    </div>
                 </aside>
             `,
             tool2FAContent: () => `
