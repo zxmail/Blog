@@ -111,7 +111,6 @@
         };
 
         App.handle2FAGenerate = function() {
-            // ... (this function is unchanged)
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             this.state.currentTotpObject = null;
             const secretInput = document.getElementById('2fa-secret');
@@ -140,7 +139,6 @@
         };
 
         App.start2FATimer = function(totp) {
-            // ... (this function is unchanged)
             const update = () => {
                 const token = totp.generate();
                 const remainingTime = totp.period - (Math.floor(Date.now() / 1000) % totp.period);
@@ -156,7 +154,6 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
-        // REWRITTEN: Now calls the external oschina.net API
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-data').value;
             const output = document.getElementById('qr-output').value;
@@ -264,7 +261,6 @@
                      <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
                 </div>
             `,
-            // UPDATED: UI and logic for QR Code tool now use a backend service
             toolQRCodeContent: () => `
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <h2 class="text-xl font-semibold mb-6 text-center">在线生成二维码(QR码)</h2>
@@ -275,15 +271,15 @@
                         </div>
                         <div class="w-full md:w-1/5 space-y-2 flex flex-col">
                             <label class="text-sm">输出格式: <select id="qr-output" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="image/png" selected>PNG</option><option value="image/gif">GIF</option><option value="image/jpeg">JPEG</option></select></label>
-                            <label class="text-sm">纠错级别: <select id="qr-error" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="L" selected>L 7%</option><option value="M">M 15%</option><option value="Q">Q 25%</option><option value="H">H 30%</option></select></label>
-                            <label class="text-sm">类型: <select id="qr-type" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 10}, (_, i) => `<option value="${i}" ${i===0 ? 'selected':''}>${i===0 ? '自动': i}</option>`).join('')}</select></label>
-                            <label class="text-sm">边缘留白: <select id="qr-margin" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 33}, (_, i) => `<option value="${i}" ${i===4 ? 'selected':''}>${i}</option>`).join('')}</select></label>
-                            <label class="text-sm">原胞大小: <select id="qr-size" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option></select></label>
+                            <label class="text-sm">纠错级别: <select id="qr-error" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="L">L 7%</option><option value="M">M 15%</option><option value="Q" selected>Q 25%</option><option value="H">H 30%</option></select></label>
+                            <label class="text-sm">类型: <select id="qr-type" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 10}, (_, i) => `<option value="${i}" ${i===3 ? 'selected':''}>${i===0 ? '自动': i}</option>`).join('')}</select></label>
+                            <label class="text-sm">边缘留白: <select id="qr-margin" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 33}, (_, i) => `<option value="${i}" ${i===5 ? 'selected':''}>${i}</option>`).join('')}</select></label>
+                            <label class="text-sm">原胞大小: <select id="qr-size" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
                             <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 mt-auto rounded-md hover:bg-green-600">生成QR码</button>
                         </div>
                         <div class="w-full md:w-2/5">
                              <label class="block text-sm font-medium mb-2">QR码:</label>
-                             <div class="border rounded-md w-full h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-700 p-2">
+                             <div class="border rounded-md w-full h-48 flex items-center justify-center bg-gray-200 dark:bg-gray-600 p-2">
                                 <img id="qr-code-output-img" alt="Generated QR Code" style="display: none; max-width: 100%; max-height: 100%;">
                              </div>
                         </div>
