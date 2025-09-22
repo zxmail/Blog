@@ -15,10 +15,17 @@ const App = {
             if (!iconString) return '<i class="fa-fw"></i>';
             if (iconString.trim().startsWith('<svg')) return iconString;
             return `<i class="${iconString} fa-fw"></i>`;
+        },
+        // A helper function to create the correct URL
+        createUrl: (path) => {
+            const isIndexPage = window.location.pathname.endsWith('/') || window.location.pathname.endsWith('index.html');
+            if (path.startsWith('#') && !isIndexPage) {
+                return `index.html${path}`;
+            }
+            return path;
         }
     },
     
-    // This is a placeholder; each page will define its own init sequence.
     init() {
         console.error("App.init() must be overridden by the specific page script.");
     },
@@ -32,7 +39,7 @@ const App = {
         this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; 
         localStorage.setItem('theme', this.state.theme); 
         this.applyTheme(); 
-        this.renderMobileSidebar(); // Re-render to update theme button
+        this.renderMobileSidebar();
         const btn = document.getElementById('theme-toggle-button'); 
         if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; 
     },
@@ -78,6 +85,16 @@ const App = {
              else btn.style.display = 'none';
         }
     },
+    // Universal search submission logic
+    handleSearchSubmit(event) {
+        event.preventDefault();
+        const query = event.target.querySelector('[name="query"]').value.trim();
+        if (query) {
+            // Directly navigate to the index.html search route
+            window.location.href = `index.html#/search/${encodeURIComponent(query)}`;
+        }
+        this.closeSearchModal();
+    },
 
     // --- Core Data Fetching Methods ---
     async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: 'index.html' }]; } },
@@ -91,12 +108,16 @@ const App = {
             const renderMenuItems = (items) => {
                 return `<ul class="list-none">${items.map(item => {
                     const hasChildren = item.children && item.children.length > 0;
-                    return `<li class="relative group"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
+                    // Use helper to create correct URL
+                    const finalUrl = App.helpers.createUrl(item.url);
+                    return `<li class="relative group"><a href="${finalUrl}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
                 }).join('')}</ul>`;
             };
             const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
                 const hasChildren = item.children && item.children.length > 0;
-                return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
+                // Use helper to create correct URL
+                const finalUrl = App.helpers.createUrl(item.url);
+                return `<div class="relative group"><a href="${finalUrl}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
             }).join('')}</nav>`;
             
             const settings = App.state.siteSettings;
@@ -152,9 +173,11 @@ const App = {
         mobileSidebarMenuItems: (items) => {
             return `<ul class="space-y-1">${items.map(item => {
                 const hasChildren = item.children && item.children.length > 0;
+                // Use helper to create correct URL for mobile menu too
+                const finalUrl = App.helpers.createUrl(item.url);
                 return `<li>
                     <div class="flex justify-between items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
-                        <a href="${hasChildren ? 'javascript:void(0)' : item.url}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
+                        <a href="${hasChildren ? 'javascript:void(0)' : finalUrl}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
                             ${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>
                         </a>
                         ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
@@ -163,7 +186,9 @@ const App = {
                 </li>`;
             }).join('')}</ul>`;
         },
-        searchModal: () => `
+        searchModal: () => {
+            // The form now calls the universal App.handleSearchSubmit
+            return `
             <div id="search-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4" onclick="App.closeSearchModal()">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative" onclick="event.stopPropagation()">
                     <button onclick="App.closeSearchModal()" class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"><i class="fas fa-times text-xl"></i></button>
@@ -175,10 +200,11 @@ const App = {
                         </div>
                     </form>
                 </div>
-            </div>`,
+            </div>`;
+        },
         footer: () => {
             const stats = App.state.siteStats || {};
-            const contactsHtml = (stats.custom_contacts || []).map(contact => 
+            const contactsHtml = (stats.custom_contacts || []).map(contact =>
                 `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
             ).join('');
 
@@ -199,13 +225,23 @@ const App = {
                                 </div>
                             </div>
                             <div class="text-center md:text-left">
-                                <span>Copyright ? ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
+                                <span>Copyright © ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </footer>`;
         },
-        friendlyLinksSection: () => { if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return ''; return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`; },
+        friendlyLinksSection: () => {
+            if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
+            return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8">
+                            <h3 class="font-semibold text-lg mb-4">友情链接</h3>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                ${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+        },
     }
 };
