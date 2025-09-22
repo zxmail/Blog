@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
+    
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
+</head>
+<body class="text-gray-800 dark:text-gray-200">
+
+    <div id="app" class="flex flex-col min-h-screen"></div>
+    <div id="sidebar-container"></div>
+    <div id="search-modal-container"></div>
+    
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center">
+      <i class="far fa-arrow-up"></i>
+    </button>
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50"></div>
+
+    <div id="qrcode-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4" onclick="App.closeQrCodeModal()">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xs text-center relative" onclick="event.stopPropagation()">
+            <button onclick="App.closeQrCodeModal()" class="absolute top-2 right-3 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white text-2xl font-light">&times;</button>
+            <h3 class="text-lg font-semibold mb-4">扫描二维码</h3>
+            <div id="qrcode-canvas" class="flex justify-center p-2 bg-white rounded-md"></div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">可以使用Google Authenticator扫描上方二维码把密钥添加至手机。</p>
+        </div>
+    </div>
+
+
+    <script src="main.js"></script>
+
+    <script>
+        const pageTools = [
+            { id: '2fa', name: '2FA工具', icon: 'fas fa-shield-check', template: 'tool2FAContent' },
+            { id: 'qrcode', name: '在线生成二维码', icon: 'fas fa-qrcode', template: 'toolQRCodeContent' },
+            { id: 'text', name: '文本处理', icon: 'fas fa-file-alt', template: 'toolComingSoonContent' },
+            { id: 'image', name: '图片处理', icon: 'fas fa-image', template: 'toolComingSoonContent' },
+            { id: 'more', name: '更多工具', icon: 'fas fa-ellipsis-h', template: 'toolComingSoonContent' }
+        ];
+
+        Object.assign(App.state, {
+            tools: pageTools,
+            activeToolId: pageTools[0].id,
+            desktopSidebar: null,
+            twoFaTimer: null,
+            currentTotpObject: null,
+            qrCodeInstance: null 
+        });
+
+        App.init = function() {
+            this.applyTheme();
+            this.renderMobileSidebar();
+            this.renderSearchModal();
+            window.addEventListener('hashchange', () => this.router());
+            window.addEventListener('load', () => this.router());
+            window.addEventListener('scroll', () => this.handleScroll());
+            window.addEventListener('resize', () => this.initStickySidebar());
+        };
+
+        App.initStickySidebar = function() {
+            const sidebarElement = document.querySelector('#tools-sidebar-wrapper');
+            if (sidebarElement && window.innerWidth >= 1024) {
+                if (this.state.desktopSidebar) this.state.desktopSidebar.destroy();
+                this.state.desktopSidebar = new StickySidebar('#tools-sidebar-wrapper', {
+                    topSpacing: 80, bottomSpacing: 20,
+                    containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper'
+                });
+            } else if (this.state.desktopSidebar) {
+                this.state.desktopSidebar.destroy();
+                this.state.desktopSidebar = null;
+            }
+        };
+        
+        App.showToast = function(title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-item bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-4 rounded-lg shadow-lg mb-2 w-72';
+            toast.innerHTML = `<p class="font-semibold text-sm">${title}</p><p class="text-xs mt-1">${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        };
+
+        App.openQrCodeModal = function() {
+            if (!this.state.currentTotpObject) {
+                alert('请先输入有效的密钥并点击“点击获取验证码”！');
+                return;
+            }
+            const qrCanvas = document.getElementById('qrcode-canvas');
+            qrCanvas.innerHTML = '';
+            
+            const uri = this.state.currentTotpObject.toString();
+
+            const qrCode = new QRCodeStyling({
+                width: 220,
+                height: 220,
+                data: uri,
+                margin: 5,
+                 qrOptions: { errorCorrectionLevel: 'M' },
+            });
+            qrCode.append(qrCanvas);
+
+            document.getElementById('qrcode-modal').style.display = 'flex';
+        };
+        App.closeQrCodeModal = function() {
+            document.getElementById('qrcode-modal').style.display = 'none';
+        };
+
+        App.handle2FAGenerate = function() {
+            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
+            this.state.currentTotpObject = null;
+            const secretInput = document.getElementById('2fa-secret');
+            const secret = secretInput.value.trim().replace(/\s/g, '');
+            if (!secret) {
+                document.getElementById('2fa-code').textContent = '请输入密钥！';
+                document.getElementById('2fa-time').textContent = '--';
+                document.getElementById('2fa-secret-display').textContent = '';
+                return;
+            }
+            try {
+                const totp = new OTPAuth.TOTP({
+                    issuer: "2FA工具",
+                    label: secret.slice(0, 16),
+                    algorithm: "SHA1",
+                    digits: 6,
+                    period: 30,
+                    secret: OTPAuth.Secret.fromBase32(secret),
+                });
+                this.state.currentTotpObject = totp;
+                this.start2FATimer(totp);
+                document.getElementById('2fa-secret-display').textContent = secret;
+            } catch (error) {
+                this.state.currentTotpObject = null;
+                console.error("Error generating TOTP:", error);
+                document.getElementById('2fa-code').textContent = '密钥错误';
+                document.getElementById('2fa-time').textContent = '0';
+                document.getElementById('2fa-secret-display').textContent = '';
+            }
+        };
+
+        App.start2FATimer = function(totp) {
+            const update = () => {
+                const token = totp.generate();
+                const remainingTime = totp.period - (Math.floor(Date.now() / 1000) % totp.period);
+                document.getElementById('2fa-code').textContent = token;
+                document.getElementById('2fa-time').textContent = remainingTime;
+                if (remainingTime === 30 || !this.state.twoFaTimer) {
+                     navigator.clipboard.writeText(token).then(() => {
+                        this.showToast("已成功获取验证码哦~", "已成功复制");
+                    }).catch(err => { console.error('Failed to copy: ', err); });
+                }
+            };
+            update();
+            this.state.twoFaTimer = setInterval(update, 1000); 
+        };
+        
+        App.handleGenerateQRCode = function() {
+            const text = document.getElementById('qr-text-input').value;
+            const errorLevel = document.getElementById('qr-error-level').value;
+            let size = parseInt(document.getElementById('qr-size').value, 10);
+            let margin = parseInt(document.getElementById('qr-margin').value, 10);
+            const outputDiv = document.getElementById('qr-code-output');
+            
+            if (!text) {
+                outputDiv.innerHTML = '';
+                this.state.qrCodeInstance = null;
+                return;
+            }
+            if (isNaN(size) || size <= 0) size = 80;
+            if (isNaN(margin) || margin < 0) margin = 0;
+
+            const options = {
+                width: size,
+                height: size,
+                data: text,
+                margin: margin,
+                qrOptions: { errorCorrectionLevel: errorLevel },
+                dotsOptions: { color: "#000", type: "square" },
+                cornersSquareOptions: { type: "square" },
+                backgroundOptions: { color: margin > 0 ? "#fff" : "transparent" },
+            };
+
+            if (!this.state.qrCodeInstance) {
+                this.state.qrCodeInstance = new QRCodeStyling(options);
+                this.state.qrCodeInstance.append(outputDiv);
+            } else {
+                this.state.qrCodeInstance.update(options);
+            }
+        };
+
+        App.router = async function() {
+            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
+            this.state.currentTotpObject = null;
+            this.state.qrCodeInstance = null;
+            const appContainer = document.getElementById('app');
+            const hash = window.location.hash.slice(1) || this.state.tools[0].id;
+            const toolExists = this.state.tools.some(t => t.id === hash);
+            this.state.activeToolId = toolExists ? hash : this.state.tools[0].id;
+            await Promise.all([ 
+                this.fetchNavIfNeeded(), 
+                this.fetchFriendlyLinksIfNeeded(), 
+                this.fetchSiteStatsIfNeeded(), 
+                this.fetchSiteSettingsIfNeeded() 
+            ]);
+            appContainer.innerHTML = this.templates.mainLayout();
+            document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
+            this.initStickySidebar();
+            if (this.state.activeToolId === 'qrcode') {
+                // Generate a QR code on initial load with default values
+                document.getElementById('qr-text-input').value = 'https://blog-9ce.pages.dev/';
+                this.handleGenerateQRCode();
+            }
+        };
+
+        Object.assign(App.templates, {
+            mainLayout: () => `
+                <div class="flex-grow">
+                    ${App.templates.header()}
+                    <main class="max-w-7xl mx-auto w-full p-4 sm:px-6">
+                        <div class="flex flex-col lg:flex-row gap-6 main-container">
+                            <div class="w-full lg:w-1/5 lg:max-w-[220px] flex-shrink-0" id="tools-sidebar-wrapper">
+                                <div class="sidebar-inner-wrapper">
+                                    ${App.templates.toolSidebar()}
+                                </div>
+                            </div>
+                            <div class="w-full">
+                                ${App.templates[App.state.tools.find(t => t.id === App.state.activeToolId).template]()}
+                            </div>
+                        </div>
+                    </main>
+                    ${App.templates.friendlyLinksSection()}
+                </div>
+                ${App.templates.footer()}
+            `,
+            toolSidebar: () => `
+                <aside class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 tool-sidebar">
+                    <div class="flex flex-row lg:flex-col items-center justify-center gap-4">
+                        ${App.state.tools.map(tool => `
+                            <a href="#${tool.id}" class="tool-item flex flex-col items-center justify-center gap-2 text-center w-20 ${tool.id === App.state.activeToolId ? 'active' : ''}">
+                                <div class="tool-icon-wrapper w-14 h-14 bg-green-500 rounded-lg flex items-center justify-center shadow-md transition-transform duration-200 hover:scale-110 hover:shadow-lg">
+                                    <i class="${tool.icon} text-white text-2xl"></i>
+                                </div>
+                                <span class="tool-label text-xs font-medium text-gray-600 dark:text-gray-400">${tool.name}</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                </aside>
+            `,
+            tool2FAContent: () => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold mb-1">2FA验证</h2>
+                    <p class="text-sm text-gray-500 mb-6">双重验证/二步验证码获取工具 (相当于谷歌身份验证器的网页版)，使用时任选一种方式输入密钥即可。</p>
+                    <input type="text" id="2fa-secret" placeholder="点击此处输入密钥" class="w-full px-4 py-3 border-2 border-green-300 rounded-md focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 dark:bg-gray-700 dark:border-green-700 dark:text-gray-200">
+                    <button onclick="App.handle2FAGenerate()" class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-md hover:bg-green-600 transition-colors">点击获取验证码</button>
+                    <div class="mt-6 text-sm space-y-3 text-gray-700 dark:text-gray-300">
+                        <p>双重密钥为：<span id="2fa-secret-display" class="font-mono"></span></p>
+                        <p>当前验证码：<span id="2fa-code" class="font-bold text-lg text-red-500">------</span></p>
+                        <div class="flex justify-between items-center">
+                            <p>剩余时间： <span id="2fa-time">--</span> 秒</p>
+                            <button onclick="App.openQrCodeModal()" class="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-md hover:bg-blue-600 transition-colors">生成二维码</button>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t dark:border-gray-700 pt-6">
+                        <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-200">2FA工具说明</h3>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed space-y-1">
+                            <p>演示密钥: <code class="bg-gray-100 dark:bg-gray-700 p-1 rounded-md text-red-500 cursor-pointer" onclick="document.getElementById('2fa-secret').value = this.textContent; App.handle2FAGenerate();">7J64V3P3E77J3LKNUGS25QANTLRLTKVL</code> (点击此密钥可复制并生成)</p>
+                            <p>新手提示：必须在倒计时结束前输入验证码登录或验证，否则会失效显示错误。调试功能时必须输入正确绑定的密钥，不要随便输入字符串去调试获取功能。目前点击获取验证码的按钮后会自动复制验证码到剪切板，直接去粘贴即可。如果想要验证生成的验证码是否正确，点击生成二维码的按钮，使用谷歌验证器APP扫描添加检查。</p>
+                            <p>最近维护： 2023年10月22日</p>
+                        </div>
+                    </div>
+                     <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
+                </div>
+            `,
+            toolQRCodeContent: () => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold mb-6">在线生成二维码(QR码)</h2>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="w-full md:w-1/2">
+                            <label for="qr-text-input" class="block text-sm font-medium mb-2">URL或其他文本:</label>
+                            <textarea id="qr-text-input" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="在此处输入内容..."></textarea>
+                        </div>
+                        <div class="w-full md:w-1/2 flex gap-4">
+                            <div class="flex-grow space-y-3">
+                                <div>
+                                    <label for="qr-error-level" class="block text-xs font-medium mb-1">纠错级别:</label>
+                                    <select id="qr-error-level" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                        <option value="L">L (7%)</option>
+                                        <option value="M" selected>M (15%)</option>
+                                        <option value="Q">Q (25%)</option>
+                                        <option value="H">H (30%)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="qr-margin" class="block text-xs font-medium mb-1">边缘留白 (Margin):</label>
+                                    <input type="number" id="qr-margin" value="1" min="0" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                </div>
+                                <div>
+                                    <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
+                                    <input type="number" id="qr-size" value="80" min="20" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                </div>
+                                <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
+                            </div>
+                            <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100">
+                                <div id="qr-code-output" class="w-full h-full flex items-center justify-center"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            toolComingSoonContent: () => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[400px]">
+                    <div class="text-center">
+                        <i class="fas fa-tools text-4xl text-gray-300 dark:text-gray-600"></i>
+                        <h2 class="text-xl font-semibold mt-4">功能开发中</h2>
+                        <p class="text-gray-500 mt-2">该工具即将上线，敬请期待。</p>
+                    </div>
+                </div>
+            `
+        });
+
+        App.init();
+    </script>
+</body>
+</html>
