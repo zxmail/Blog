@@ -42,6 +42,7 @@
         .dropdown-menu li:hover > .sub-menu { display: block; }
         .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
         .sub-menu { top: -0.25rem; left: 100%; }
+        #sidebar-menu .rotate-90 { transform: rotate(90deg); }
 
         @media (max-width: 639.98px) {
             body .p-4 {
@@ -80,29 +81,29 @@
                 comments: {}, 
                 theme: localStorage.getItem('theme') || 'light',
                 carouselData: null,
-                sidebar: null,
+                desktopSidebar: null,
             },
             helpers: {
                 stripHtmlAndTruncate: (html, length) => { const doc = new DOMParser().parseFromString(html, 'text/html'); const text = doc.body.textContent || ""; return text.length > length ? text.substring(0, length) + '...' : text; },
                 renderIcon: (iconString) => {
-                    if (!iconString) return '<i class="fa-fw"></i>'; // Return empty icon space if none provided
+                    if (!iconString) return '<i class="fa-fw"></i>';
                     if (iconString.trim().startsWith('<svg')) return iconString;
                     return `<i class="${iconString} fa-fw"></i>`;
                 }
             },
             init() {
                 this.applyTheme();
-                this.renderSidebar();
+                this.renderMobileSidebar();
                 window.addEventListener('hashchange', () => this.router());
                 window.addEventListener('load', () => this.router());
                 window.addEventListener('scroll', () => this.handleScroll());
             },
             applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
-            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
+            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderMobileSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
             
-            // --- Sidebar Methods ---
-            renderSidebar() {
-                 document.getElementById('sidebar-container').innerHTML = this.templates.sidebar();
+            // --- Mobile Sidebar Methods ---
+            renderMobileSidebar() {
+                 document.getElementById('sidebar-container').innerHTML = this.templates.mobileSidebar();
             },
             openSidebar() {
                 document.getElementById('sidebar-overlay')?.classList.remove('hidden');
@@ -123,7 +124,7 @@
             },
 
             initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
-            initStickySidebar() { const sidebarElement = document.querySelector('#sidebar'); if (sidebarElement) { if (this.state.sidebar) { this.state.sidebar.destroy(); } this.state.sidebar = new StickySidebar('#sidebar', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
+            initStickySidebar() { const sidebarElement = document.querySelector('#desktop-sidebar-wrapper'); if (sidebarElement) { if (this.state.desktopSidebar) { this.state.desktopSidebar.destroy(); } this.state.desktopSidebar = new StickySidebar('#desktop-sidebar-wrapper', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
             async router() {
                 const appContainer = document.getElementById('app');
                 const path = window.location.hash.slice(1) || '/';
@@ -153,7 +154,7 @@
                 }
                 document.title = this.state.siteSettings?.blogName || '我的博客';
                 this.initStickySidebar();
-                this.renderSidebar(); // Re-render sidebar after nav items are fetched
+                this.renderMobileSidebar();
             },
             handleSearchSubmit(event) { event.preventDefault(); const query = event.target.querySelector('[name="query"]').value.trim(); if (query) window.location.hash = `#/search/${encodeURIComponent(query)}`; },
             async handleCommentSubmit(event, slug) { event.preventDefault(); const { nickname, content } = event.target; if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; } try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) }); if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } else throw new Error('评论失败'); } catch (e) { alert('评论提交失败'); } },
@@ -211,8 +212,8 @@
                     </header>`;
                 },
 
-                sidebar: () => {
-                    const navItemsHtml = App.templates.sidebarMenuItems(App.state.navItems);
+                mobileSidebar: () => {
+                    const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
                     return `
                         <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" onclick="App.closeSidebar()"></div>
@@ -230,7 +231,7 @@
                         </nav>
                     `;
                 },
-                sidebarMenuItems: (items) => { // Recursive function
+                mobileSidebarMenuItems: (items) => { // Recursive function
                     return `<ul class="space-y-1">${items.map(item => {
                         const hasChildren = item.children && item.children.length > 0;
                         return `
@@ -242,14 +243,24 @@
                                     </a>
                                     ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
                                 </div>
-                                ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.sidebarMenuItems(item.children)}</ul>` : ''}
+                                ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.mobileSidebarMenuItems(item.children)}</ul>` : ''}
                             </li>
                         `;
                     }).join('')}</ul>`;
                 },
 
-                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.sidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+                mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.desktopSidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
                 
+                desktopSidebar: () => {
+                    const modulesConfig = App.state.siteSettings?.sidebarModules;
+                    if (!modulesConfig) return '';
+                    const modulesHtml = modulesConfig
+                        .filter(module => module.enabled)
+                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
+                        .join('');
+                    return `<aside id="desktop-sidebar-wrapper"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
+                },
+
                 sidebarModules: {
                     search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
                     stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
