@@ -188,7 +188,8 @@
                 qrOptions: { errorCorrectionLevel: errorLevel },
                 dotsOptions: { color: "#000", type: "square" },
                 cornersSquareOptions: { type: "square" },
-                backgroundOptions: { color: "#fff" },
+                // CORRECTED: Set background to transparent to remove the white border
+                backgroundOptions: { color: "transparent" },
             };
 
             if (!this.state.qrCodeInstance) {
@@ -199,7 +200,6 @@
             }
         };
 
-        // NEW: Function to handle the download button click
         App.handleDownloadQRCode = function() {
             if (!this.state.qrCodeInstance) {
                 alert("请先生成一个二维码！");
