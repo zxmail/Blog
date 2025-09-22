@@ -209,12 +209,13 @@
                     
                     const settings = App.state.siteSettings;
                     const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
+                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[40px] w-auto">` : '';
                     const blogName = settings?.blogName || '';
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
                     return `<header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
                         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-                            <div class="flex justify-between items-center h-[62px]">
+                            <div class="flex justify-between items-center h-[50px] md:h-[62px]">
                                 <div class="hidden md:flex flex-1 items-center gap-4">
                                     <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>
                                     ${renderTopLevelMenu(App.state.navItems)}
@@ -226,20 +227,19 @@
                                 </div>
                                 <div class="md:hidden flex flex-1 w-full justify-between items-center">
                                     <div class="flex-1 text-left">
-                                        <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-xl"></i></button>
+                                        <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-base font-medium"></i></button>
                                     </div>
                                     <div class="flex-shrink-0">
-                                        <a href="#" class="flex items-center gap-2">${logoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                                        <a href="#" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
                                     </div>
                                     <div class="flex-1 text-right">
-                                         <button onclick="App.openSearchModal()" class="p-2 -mr-2"><i class="fas fa-search text-xl"></i></button>
+                                         <button onclick="App.openSearchModal()" class="p-2 -mr-2"><i class="fas fa-search text-base font-medium"></i></button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </header>`;
                 },
-
                 mobileSidebar: () => {
                     const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
                     const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
