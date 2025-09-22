@@ -11,51 +11,12 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.2.2/dist/otpauth.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { 'accent': '#10b981' } } }
-        };
-    </script>
-    <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f5f5f5; }
-        .dark body { background-color: #1a202c; }
-        .content-area { font-size: 15px; line-height: 1.7; color: #606266; }
-        .dark .content-area { color: #d1d5db; }
-        .content-area a { color: #3b82f6; text-decoration: underline; }
-        .dark .content-area a { color: #60a5fa; }
-        #back-to-top { position: fixed; bottom: 20%; right: 2rem; display: none; width: 38px; height: 38px; border-radius: 3px; background-color: rgb(188 188 188); color: #1e1e1e; transition: background-color: 0.3s ease, color: 0.3s ease; }
-        #back-to-top:hover { background-color: rgb(123 123 123); color: #fff; }
-        #back-to-top i { font-size: 15px; font-weight: 400; }
-        .divide-gray-200 > :not([hidden]) ~ :not([hidden]), .border-gray-200 { border-color: rgb(245 245 245 / 1) !important; }
-        .dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]), .dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
-        .rounded-lg { border-radius: 0.2rem !important; }
-        .rounded-md { border-radius: 0.1rem !important; }
-        .swiper-button-next, .swiper-button-prev { color: #ffffff; background-color: rgba(0,0,0,0.25); width: 44px; height: 44px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease, background-color: 0.3s ease; }
-        .swiper:hover .swiper-button-next, .swiper:hover .swiper-button-prev { opacity: 1; }
-        .swiper-button-next:hover, .swiper-button-prev:hover { background-color: rgba(0,0,0,0.4); }
-        .swiper-button-next:after, .swiper-button-prev:after { font-size: 20px; font-weight: bold; }
-        .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
-        .swiper-pagination-bullet-active { background-color: #ffffff; }
-        .group .dropdown-menu { display: none; }
-        .group:hover > .dropdown-menu { display: block; }
-        .dropdown-menu .sub-menu { display: none; }
-        .dropdown-menu li:hover > .sub-menu { display: block; }
-        .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
-        .sub-menu { top: -0.25rem; left: 100%; }
-        #sidebar-menu .rotate-90 { transform: rotate(90deg); }
-        #sidebar-menu { font-size: 13px; }
-        .tool-sidebar a.active { background-color: #10b981; }
-        .tool-sidebar a.active i, .tool-sidebar a.active span { color: white !important; }
+    
+    <link rel="stylesheet" href="style.css">
 
-        @media (max-width: 639.98px) {
-            body .p-4 { padding: 0.5rem; }
-            body .p-6 { padding: 0.9rem; }
-        }
-    </style>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
 
@@ -63,15 +24,116 @@
     <div id="sidebar-container"></div>
     <div id="search-modal-container"></div>
     
-    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center hidden">
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center">
       <i class="far fa-arrow-up"></i>
     </button>
 
-    <script src="shared-app.js"></script>
+    <script src="main.js"></script>
+
     <script>
-        // 初始化博客应用
+        // Extend the global App object with page-specific properties and methods
+        Object.assign(App.state, {
+            posts: [],
+            tags: [],
+            categories: {},
+            recentPosts: [],
+            recentComments: [],
+            comments: {}, 
+            carouselData: null,
+            desktopSidebar: null,
+        });
+
+        Object.assign(App.helpers, {
+            stripHtmlAndTruncate: (html, length) => { const doc = new DOMParser().parseFromString(html, 'text/html'); const text = doc.body.textContent || ""; return text.length > length ? text.substring(0, length) + '...' : text; },
+        });
+
+        App.init = function() {
+            this.applyTheme();
+            this.renderMobileSidebar();
+            this.renderSearchModal();
+            window.addEventListener('hashchange', () => this.router());
+            window.addEventListener('load', () => this.router());
+            window.addEventListener('scroll', () => this.handleScroll());
+        };
+
+        App.initSwiper = function() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } };
+        App.initStickySidebar = function() { const sidebarElement = document.querySelector('#desktop-sidebar-wrapper'); if (sidebarElement) { if (this.state.desktopSidebar) { this.state.desktopSidebar.destroy(); } this.state.desktopSidebar = new StickySidebar('#desktop-sidebar-wrapper', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } };
+        
+        App.router = async function() {
+            const appContainer = document.getElementById('app');
+            const path = window.location.hash.slice(1) || '/';
+            const parts = path.split('/');
+            await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
+            await this.fetchDataIfNeeded();
+            
+            if (path === '/') {
+                appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(this.state.posts));
+                this.initSwiper();
+            } else if (parts[1] === 'post' && parts[2]) {
+                const slug = parts[2];
+                const post = await this.fetchSinglePost(slug);
+                await this.fetchCommentsForPost(slug);
+                if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
+                appContainer.innerHTML = this.templates.mainLayout(this.templates.postPage(post));
+            } else if (['search', 'category', 'tag'].includes(parts[1])) {
+                let results = [];
+                let title = "文章列表";
+                if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
+                } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
+                } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
+                appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(results, title));
+                this.initSwiper();
+            } else {
+                appContainer.innerHTML = this.templates.mainLayout(this.templates.notFoundPage());
+            }
+            document.title = this.state.siteSettings?.blogName || '我的博客';
+            this.initStickySidebar();
+            this.renderMobileSidebar();
+        };
+
+        App.handleSearchSubmit = function(event) {
+            event.preventDefault();
+            const query = event.target.querySelector('[name="query"]').value.trim();
+            if (query) {
+                window.location.hash = `#/search/${encodeURIComponent(query)}`;
+            }
+            this.closeSearchModal();
+        };
+
+        App.handleCommentSubmit = async function(event, slug) { event.preventDefault(); const { nickname, content } = event.target; if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; } try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) }); if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } else throw new Error('评论失败'); } catch (e) { alert('评论提交失败'); } };
+        
+        // Page-specific data fetching
+        App.fetchDataIfNeeded = async function(forceRefresh = false) { if (this.state.posts.length === 0 || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/posts`); const posts = await res.json(); this.state.posts = posts; const categories = {}; posts.forEach(p => { const catParts = p.category.split('/'); catParts.forEach((part, i) => { const catPath = catParts.slice(0, i + 1).join('/'); categories[catPath] = (categories[catPath] || 0) + 1; }); }); this.state.categories = categories; this.state.recentPosts = posts.slice(0, 5); } catch (e) {} };
+        App.fetchTagsIfNeeded = async function() { if (this.state.tags.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/tags`); this.state.tags = await res.json(); } catch (e) {} };
+        App.fetchRecentCommentsIfNeeded = async function(forceRefresh = false) { if (this.state.recentComments.length === 0 || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/comments/recent`); this.state.recentComments = await res.json(); } catch (e) {} };
+        App.fetchCommentsForPost = async function(slug) { try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`); this.state.comments[slug] = await res.json(); } catch (e) { this.state.comments[slug] = []; } };
+        App.fetchSinglePost = async function(slug) { try { const response = await fetch(`${this.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { return null; } };
+        App.fetchSearchResults = async function(query) { try { const res = await fetch(`${this.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { return []; } };
+        App.fetchCarouselDataIfNeeded = async function() { if (!this.state.carouselData) try { const res = await fetch(`${this.config.workerUrl}/api/carousel`); this.state.carouselData = await res.json(); } catch (e) {} };
+
+        // Page-specific templates
+        Object.assign(App.templates, {
+            mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="lg:flex gap-[23px] main-container"><div class="w-full lg:w-3/4">${content}</div><div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.desktopSidebar()}</div></div></main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
+            desktopSidebar: () => { const modulesConfig = App.state.siteSettings?.sidebarModules; if (!modulesConfig) return ''; const modulesHtml = modulesConfig.filter(module => module.enabled).map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '').join(''); return `<aside id="desktop-sidebar-wrapper"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`; },
+            sidebarModules: {
+                search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
+                stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
+                recentPosts: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</div><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></a></li>`).join('')}</ul></div>`,
+                categories: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div>`,
+                tags: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div>`,
+                recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
+            },
+            carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const slidesHtml = data.slides.map(slide => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover">`; const linkWrapper = slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${slideContent}</a>` : slideContent; return `<div class="swiper-slide">${linkWrapper}</div>`; }).join(''); return `<div class="swiper w-full rounded-lg shadow-lg aspect-[4/1] md:aspect-auto md:h-[230px]"><div class="swiper-wrapper">${slidesHtml}</div><div class="swiper-pagination"></div><div class="swiper-button-prev"></div><div class="swiper-button-next"></div></div>`; },
+            homePage: (posts, title = "最新文章") => `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-lg md:text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`,
+            postCard: (post) => `<div class="p-6 flex flex-row items-center"><div class="relative w-1/3 flex-shrink-0 overflow-hidden rounded-md aspect-[16/9]"><a href="#/post/${post.slug}" class="block h-full w-full group"><img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';"></a><a href="#/category/${encodeURIComponent(post.category)}" class="hidden md:block absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a></div><div class="pl-5 flex-grow flex flex-col justify-between self-stretch"><div><h2 class="text-base md:text-lg font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2><div class="hidden md:block text-gray-600 dark:text-gray-400 leading- relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div></div><div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-auto"><span>${new Date(post.date).toLocaleDateString()}</span><div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div></div></div></div>`,
+            postPage: (post) => { if (!post) return App.templates.notFoundPage(); const postIndex = App.state.posts.findIndex(p => p.slug === post.slug); const prevPost = App.state.posts[postIndex + 1]; const nextPost = App.state.posts[postIndex - 1]; const postNavigationHtml = `<div class="mt-8 flex justify-between gap-2 sm:gap-4 text-white">${prevPost?`<a href="#/post/${prevPost.slug}" class="relative w-1/2 h-20 rounded-lg overflow-hidden block group"><img src="${prevPost.imageUrl||'https://placehold.co/400x96/7f9cf5/ffffff?text=Prev'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${prevPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Prev';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center"><span class="text-xs font-light"><< 上一篇</span><span class="font-semibold mt-1 text-sm truncate">${prevPost.title}</span></div></a>`:'<div class="w-1/2"></div>'}${nextPost?`<a href="#/post/${nextPost.slug}" class="relative w-1/2 h-20 rounded-lg overflow-hidden block group"><img src="${nextPost.imageUrl||'https://placehold.co/400x96/7f9cf5/ffffff?text=Next'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${nextPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Next';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center text-right"><span class="text-xs font-light">下一篇 >></span><span class="font-semibold mt-1 text-sm truncate">${nextPost.title}</span></div></a>`:'<div class="w-1/2"></div>'}</div>`; return `<article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="mb-4 text-sm text-gray-500 dark:text-gray-400"><a href="#" class="hover:text-blue-500">首页</a><span class="mx-1 sm:mx-2">></span><a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a><span class="mx-1 sm:mx-2">></span><span>正文</span></div><div class="text-center border-b dark:border-gray-700 pb-5 mb-6"><h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">${post.title}</h1><div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-3 space-x-2 sm:space-x-4"><span>${new Date(post.date).toLocaleDateString().replace(/\//g,'-')}</span><span>分类: <a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a></span><span>阅读(${post.views||0})</span><span>评论(${App.state.comments[post.slug]?.length||0})</span></div></div>${post.imageUrl?`<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">`:''}<div class="content-area">${post.content}</div><div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap items-center gap-2">${(post.tags&&post.tags.length>0)?'<span class="font-semibold text-sm">标签:</span>':''}${(post.tags||[]).map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div>${postNavigationHtml}</article>${App.templates.commentsSection(post.slug)}${App.templates.commentForm(post.slug)}`; },
+            commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname" class="block text-sm font-medium mb-1">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content" class="block text-sm font-medium mb-1">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
+            commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3><div class="space-y-6">${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'}</div></div>`; },
+            notFoundPage: () => `<div class="text-center py-20"><h1 class="text-4xl font-bold">404</h1><p class="mt-4">页面不存在</p><a href="#" class="mt-6 inline-block bg-blue-500 text-white px-6 py-2 rounded">返回首页</a></div>`
+        });
+
+        // Initialize the App
         App.init();
     </script>
-
 </body>
 </html>
