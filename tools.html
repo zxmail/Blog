@@ -40,10 +40,11 @@
             { id: 'more', name: '更多工具', icon: 'fas fa-ellipsis-h', template: 'toolComingSoonContent' }
         ];
 
-        // Extend the global App object with page-specific properties
+        // Extend the global App object
         Object.assign(App.state, {
             tools: pageTools,
-            activeToolId: pageTools[0].id
+            activeToolId: pageTools[0].id,
+            desktopSidebar: null, // To hold the sticky instance
         });
 
         // Override the init function for the tools page
@@ -54,6 +55,31 @@
             window.addEventListener('hashchange', () => this.router());
             window.addEventListener('load', () => this.router());
             window.addEventListener('scroll', () => this.handleScroll());
+            // Add a resize listener to re-initialize the sidebar on screen size changes
+            window.addEventListener('resize', () => this.initStickySidebar());
+        };
+
+        // NEW: Function to initialize the sticky sidebar
+        App.initStickySidebar = function() {
+            const sidebarElement = document.querySelector('#tools-sidebar-wrapper');
+            // Only apply sticky behavior on large screens (lg breakpoint in Tailwind is 1024px)
+            if (sidebarElement && window.innerWidth >= 1024) {
+                // If an instance already exists, destroy it first
+                if (this.state.desktopSidebar) {
+                    this.state.desktopSidebar.destroy();
+                }
+                // Create a new instance
+                this.state.desktopSidebar = new StickySidebar('#tools-sidebar-wrapper', {
+                    topSpacing: 80, // Space from the top, accounts for the header
+                    bottomSpacing: 20, // Space from the bottom
+                    containerSelector: '.main-container',
+                    innerWrapperSelector: '.sidebar-inner-wrapper'
+                });
+            } else if (this.state.desktopSidebar) {
+                // If the screen is too small, destroy the instance to prevent layout issues
+                this.state.desktopSidebar.destroy();
+                this.state.desktopSidebar = null;
+            }
         };
 
         // Page-specific router
@@ -73,6 +99,9 @@
             
             appContainer.innerHTML = this.templates.mainLayout();
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
+            
+            // Call the sticky sidebar initialization after rendering
+            this.initStickySidebar();
         };
 
         // Add page-specific templates
@@ -81,9 +110,11 @@
                 <div class="flex-grow">
                     ${App.templates.header()}
                     <main class="max-w-7xl mx-auto w-full p-4 sm:px-6">
-                        <div class="flex flex-col lg:flex-row gap-6">
-                            <div class="w-full lg:w-1/5 lg:max-w-[220px] flex-shrink-0">
-                                ${App.templates.toolSidebar()}
+                        <div class="flex flex-col lg:flex-row gap-6 main-container">
+                            <div class="w-full lg:w-1/5 lg:max-w-[220px] flex-shrink-0" id="tools-sidebar-wrapper">
+                                <div class="sidebar-inner-wrapper">
+                                    ${App.templates.toolSidebar()}
+                                </div>
                             </div>
                             <div class="w-full">
                                 ${App.templates[App.state.tools.find(t => t.id === App.state.activeToolId).template]()}
