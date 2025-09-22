@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.2.2/dist/otpauth.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
 
@@ -44,7 +44,6 @@
             tools: pageTools,
             activeToolId: pageTools[0].id,
             desktopSidebar: null,
-            // NEW: State for 2FA timer
             twoFaTimer: null, 
         });
 
@@ -72,12 +71,11 @@
             }
         };
 
-        // NEW: Function to handle the 2FA code generation button click
         App.handle2FAGenerate = function() {
-            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer); // Clear previous timer
+            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
 
             const secretInput = document.getElementById('2fa-secret');
-            const secret = secretInput.value.trim().replace(/\s/g, ''); // Get secret and remove spaces
+            const secret = secretInput.value.trim().replace(/\s/g, '');
 
             if (!secret) {
                 alert('请输入密钥！');
@@ -85,7 +83,7 @@
             }
 
             try {
-                // Create a new TOTP object.
+                // Using the correct API call for v9+ of the library
                 const totp = new otpauth.TOTP({
                     issuer: "ACME",
                     label: "2FA Tool",
@@ -94,7 +92,7 @@
                     period: 30,
                     secret: otpauth.Secret.fromBase32(secret),
                 });
-                this.start2FATimer(totp); // Start the timer and code generation
+                this.start2FATimer(totp);
             } catch (error) {
                 console.error("Error generating TOTP:", error);
                 alert('密钥无效。请确保您输入的是正确的Base32编码密钥。');
@@ -103,7 +101,6 @@
             }
         };
 
-        // NEW: Function to start the 30-second countdown and update the code
         App.start2FATimer = function(totp) {
             const update = () => {
                 const token = totp.generate();
@@ -112,7 +109,6 @@
                 document.getElementById('2fa-code').textContent = token;
                 document.getElementById('2fa-time').textContent = remainingTime;
 
-                // Auto-copy the new code only when it first generates (at 30s)
                 if (remainingTime === 30) {
                     navigator.clipboard.writeText(token).then(() => {
                         console.log('Code copied to clipboard!');
@@ -120,13 +116,12 @@
                 }
             };
             
-            update(); // Run once immediately
-            // Run every second to update the countdown
+            update();
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
 
         App.router = async function() {
-            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer); // Clear timer when changing pages
+            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             const appContainer = document.getElementById('app');
             const hash = window.location.hash.slice(1) || this.state.tools[0].id;
             
