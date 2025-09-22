@@ -55,8 +55,7 @@
             activeToolId: pageTools[0].id,
             desktopSidebar: null,
             twoFaTimer: null,
-            currentTotpObject: null,
-            qrCodeInstance: null 
+            currentTotpObject: null
         });
 
         App.init = function() {
@@ -99,18 +98,12 @@
             }
             const qrCanvas = document.getElementById('qrcode-canvas');
             qrCanvas.innerHTML = '';
-            
             const uri = this.state.currentTotpObject.toString();
-
             const qrCode = new QRCodeStyling({
-                width: 220,
-                height: 220,
-                data: uri,
-                margin: 5,
+                width: 220, height: 220, data: uri, margin: 5,
                  qrOptions: { errorCorrectionLevel: 'M' },
             });
             qrCode.append(qrCanvas);
-
             document.getElementById('qrcode-modal').style.display = 'flex';
         };
         App.closeQrCodeModal = function() {
@@ -118,6 +111,7 @@
         };
 
         App.handle2FAGenerate = function() {
+            // ... (this function is unchanged)
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             this.state.currentTotpObject = null;
             const secretInput = document.getElementById('2fa-secret');
@@ -130,12 +124,8 @@
             }
             try {
                 const totp = new OTPAuth.TOTP({
-                    issuer: "2FA工具",
-                    label: secret.slice(0, 16),
-                    algorithm: "SHA1",
-                    digits: 6,
-                    period: 30,
-                    secret: OTPAuth.Secret.fromBase32(secret),
+                    issuer: "2FA工具", label: secret.slice(0, 16), algorithm: "SHA1",
+                    digits: 6, period: 30, secret: OTPAuth.Secret.fromBase32(secret),
                 });
                 this.state.currentTotpObject = totp;
                 this.start2FATimer(totp);
@@ -150,6 +140,7 @@
         };
 
         App.start2FATimer = function(totp) {
+            // ... (this function is unchanged)
             const update = () => {
                 const token = totp.generate();
                 const remainingTime = totp.period - (Math.floor(Date.now() / 1000) % totp.period);
@@ -165,72 +156,51 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
-        // THIS IS THE CORRECTED FUNCTION
+        // REWRITTEN: Now calls the external oschina.net API
         App.handleGenerateQRCode = function() {
-            const text = document.getElementById('qr-text-input').value;
-            const errorLevel = document.getElementById('qr-error-level').value;
-            let totalSize = parseInt(document.getElementById('qr-size').value, 10);
-            let marginInPx = parseInt(document.getElementById('qr-margin').value, 10);
-            const outputDiv = document.getElementById('qr-code-output');
-            
+            const text = document.getElementById('qr-data').value;
+            const output = document.getElementById('qr-output').value;
+            const errorLevel = document.getElementById('qr-error').value;
+            const type = document.getElementById('qr-type').value;
+            const margin = document.getElementById('qr-margin').value;
+            const size = document.getElementById('qr-size').value;
+            const outputImg = document.getElementById('qr-code-output-img');
+
             if (!text) {
-                outputDiv.innerHTML = '';
-                this.state.qrCodeInstance = null;
-                return;
-            }
-            if (isNaN(totalSize) || totalSize <= 20) totalSize = 80;
-            if (isNaN(marginInPx) || marginInPx < 0) marginInPx = 0;
-
-            const qrCodeSize = totalSize - (marginInPx * 2);
-
-            if (qrCodeSize <= 0) {
-                outputDiv.innerHTML = '';
-                this.state.qrCodeInstance = null;
+                outputImg.style.display = 'none';
                 return;
             }
 
-            // Apply the pixel margin as CSS padding to the container
-            outputDiv.style.padding = `${marginInPx}px`;
-            outputDiv.style.backgroundColor = '#fff'; // Ensure the padding area is white
-
-            const options = {
-                width: qrCodeSize,
-                height: qrCodeSize,
+            const params = new URLSearchParams({
                 data: text,
-                margin: 0, // Library margin is set to 0, we control it with CSS
-                qrOptions: { errorCorrectionLevel: errorLevel },
-                dotsOptions: { color: "#000", type: "square" },
-                cornersSquareOptions: { type: "square" },
-                backgroundOptions: { color: "#fff" }, // QR code's own background
-            };
+                output: output,
+                error: errorLevel,
+                type: type,
+                margin: margin,
+                size: size,
+            });
 
-            if (!this.state.qrCodeInstance) {
-                this.state.qrCodeInstance = new QRCodeStyling(options);
-                this.state.qrCodeInstance.append(outputDiv);
-            } else {
-                this.state.qrCodeInstance.update(options);
-            }
+            const apiUrl = `https://tool.oschina.net/action/qrcode/generate?${params.toString()}`;
+            
+            outputImg.src = `${apiUrl}&timestamp=${new Date().getTime()}`;
+            outputImg.style.display = 'block';
         };
 
         App.router = async function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             this.state.currentTotpObject = null;
-            this.state.qrCodeInstance = null;
             const appContainer = document.getElementById('app');
             const hash = window.location.hash.slice(1) || this.state.tools[0].id;
             const toolExists = this.state.tools.some(t => t.id === hash);
             this.state.activeToolId = toolExists ? hash : this.state.tools[0].id;
             await Promise.all([ 
-                this.fetchNavIfNeeded(), 
-                this.fetchFriendlyLinksIfNeeded(), 
-                this.fetchSiteStatsIfNeeded(), 
-                this.fetchSiteSettingsIfNeeded() 
+                this.fetchNavIfNeeded(), this.fetchFriendlyLinksIfNeeded(), 
+                this.fetchSiteStatsIfNeeded(), this.fetchSiteSettingsIfNeeded() 
             ]);
             appContainer.innerHTML = this.templates.mainLayout();
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
             this.initStickySidebar();
             if (this.state.activeToolId === 'qrcode') {
-                document.getElementById('qr-text-input').value = 'https://blog-9ce.pages.dev/';
                 this.handleGenerateQRCode();
             }
         };
@@ -294,38 +264,28 @@
                      <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
                 </div>
             `,
+            // UPDATED: UI and logic for QR Code tool now use a backend service
             toolQRCodeContent: () => `
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h2 class="text-xl font-semibold mb-6">在线生成二维码(QR码)</h2>
+                    <h2 class="text-xl font-semibold mb-6 text-center">在线生成二维码(QR码)</h2>
                     <div class="flex flex-col md:flex-row gap-6">
-                        <div class="w-full md:w-1/2">
-                            <label for="qr-text-input" class="block text-sm font-medium mb-2">URL或其他文本:</label>
-                            <textarea id="qr-text-input" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="在此处输入内容..."></textarea>
+                        <div class="w-full md:w-2/5">
+                            <label for="qr-data" class="block text-sm font-medium mb-2">URL或其他文本:</label>
+                            <textarea id="qr-data" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">https://tool.oschina.net/qr</textarea>
                         </div>
-                        <div class="w-full md:w-1/2 flex gap-4">
-                            <div class="flex-grow space-y-3">
-                                <div>
-                                    <label for="qr-error-level" class="block text-xs font-medium mb-1">纠错级别:</label>
-                                    <select id="qr-error-level" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
-                                        <option value="L">L (7%)</option>
-                                        <option value="M" selected>M (15%)</option>
-                                        <option value="Q">Q (25%)</option>
-                                        <option value="H">H (30%)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="qr-margin" class="block text-xs font-medium mb-1">边缘留白 (px):</label>
-                                    <input type="number" id="qr-margin" value="8" min="0" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
-                                </div>
-                                <div>
-                                    <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
-                                    <input type="number" id="qr-size" value="80" min="20" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
-                                </div>
-                                <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
-                            </div>
-                            <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100">
-                                <div id="qr-code-output"></div>
-                            </div>
+                        <div class="w-full md:w-1/5 space-y-2 flex flex-col">
+                            <label class="text-sm">输出格式: <select id="qr-output" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="image/png" selected>PNG</option><option value="image/gif">GIF</option><option value="image/jpeg">JPEG</option></select></label>
+                            <label class="text-sm">纠错级别: <select id="qr-error" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="L" selected>L 7%</option><option value="M">M 15%</option><option value="Q">Q 25%</option><option value="H">H 30%</option></select></label>
+                            <label class="text-sm">类型: <select id="qr-type" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 10}, (_, i) => `<option value="${i}" ${i===0 ? 'selected':''}>${i===0 ? '自动': i}</option>`).join('')}</select></label>
+                            <label class="text-sm">边缘留白: <select id="qr-margin" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600">${Array.from({length: 33}, (_, i) => `<option value="${i}" ${i===4 ? 'selected':''}>${i}</option>`).join('')}</select></label>
+                            <label class="text-sm">原胞大小: <select id="qr-size" class="w-full border rounded-md p-1 dark:bg-gray-700 dark:border-gray-600"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option></select></label>
+                            <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 mt-auto rounded-md hover:bg-green-600">生成QR码</button>
+                        </div>
+                        <div class="w-full md:w-2/5">
+                             <label class="block text-sm font-medium mb-2">QR码:</label>
+                             <div class="border rounded-md w-full h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-700 p-2">
+                                <img id="qr-code-output-img" alt="Generated QR Code" style="display: none; max-width: 100%; max-height: 100%;">
+                             </div>
                         </div>
                     </div>
                 </div>
