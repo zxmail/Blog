@@ -6,7 +6,7 @@
     <title>在线工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/dist/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
@@ -98,15 +98,16 @@
             qrCanvas.innerHTML = '';
             
             const uri = this.state.currentTotpObject.toString();
-
-            new QRCode(qrCanvas, {
-                text: uri,
+            // Using qrcode-svg for the 2FA modal as well for consistency
+            const svgString = new QRCodeSVG({
+                content: uri,
                 width: 220,
                 height: 220,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
+                padding: 1, // 1 module padding
+                ecl: "M"
+            }).svg();
+            qrCanvas.innerHTML = svgString;
+            
             document.getElementById('qrcode-modal').style.display = 'flex';
         };
         App.closeQrCodeModal = function() {
@@ -172,28 +173,32 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
+        // REWRITTEN: Now uses qrcode-svg for sharp, clear QR codes
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
             let size = parseInt(document.getElementById('qr-size').value, 10);
+            let padding = parseInt(document.getElementById('qr-padding').value, 10);
             const outputDiv = document.getElementById('qr-code-output');
 
-            outputDiv.innerHTML = '';
-            
             if (!text) {
+                outputDiv.innerHTML = '';
                 return;
             }
-            // UPDATED: Removed the minimum size validation to allow for smaller QR codes.
-            if (isNaN(size) || size <= 0) {
-                size = 200; // Set a reasonable default if input is invalid.
-            }
 
-            new QRCode(outputDiv, {
-                text: text,
+            if (isNaN(size) || size <= 0) size = 200;
+            if (isNaN(padding) || padding < 0) padding = 1;
+
+            const svgString = new QRCodeSVG({
+                content: text,
                 width: size,
                 height: size,
-                correctLevel: QRCode.CorrectLevel[errorLevel]
-            });
+                padding: padding,
+                ecl: errorLevel, // "L", "M", "Q", "H"
+                container: "svg-viewbox" // Makes the SVG responsive
+            }).svg();
+            
+            outputDiv.innerHTML = svgString;
         };
 
         App.router = async function() {
@@ -285,13 +290,14 @@
                      <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
                 </div>
             `,
+            // UPDATED: UI for QR Code tool rewritten for new library and options
             toolQRCodeContent: () => `
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <h2 class="text-xl font-semibold mb-6">在线生成二维码(QR码)</h2>
                     <div class="flex flex-col md:flex-row gap-6">
                         <div class="w-full md:w-1/2">
                             <label for="qr-text-input" class="block text-sm font-medium mb-2">URL或其他文本:</label>
-                            <textarea id="qr-text-input" onkeyup="App.handleGenerateQRCode()" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="http://qr.xyrj.us.kg"></textarea>
+                            <textarea id="qr-text-input" onkeyup="App.handleGenerateQRCode()" class="w-full h-48 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-blue-500" placeholder="在此处输入内容..."></textarea>
                         </div>
 
                         <div class="w-full md:w-1/2 flex gap-4">
@@ -306,13 +312,17 @@
                                     </select>
                                 </div>
                                 <div>
+                                    <label for="qr-padding" class="block text-xs font-medium mb-1">边缘留白 (模块):</label>
+                                    <input type="number" id="qr-padding" value="1" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                </div>
+                                <div>
                                     <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
                                     <input type="number" id="qr-size" value="200" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                 </div>
                                 <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
                             </div>
-                            <div class="w-48 h-48 flex-shrink-0 border rounded-md p-2 flex items-center justify-center dark:bg-white">
-                                <div id="qr-code-output"></div>
+                            <div class="w-48 h-48 flex-shrink-0 border rounded-md p-2 flex items-center justify-center bg-white">
+                                <div id="qr-code-output" class="w-full h-full"></div>
                             </div>
                         </div>
                     </div>
