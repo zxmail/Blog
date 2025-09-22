@@ -188,8 +188,8 @@
                 qrOptions: { errorCorrectionLevel: errorLevel },
                 dotsOptions: { color: "#000", type: "square" },
                 cornersSquareOptions: { type: "square" },
-                // CORRECTED: Set background to transparent to remove the white border
-                backgroundOptions: { color: "transparent" },
+                // UPDATED: Logic to show a white background only when a margin is set
+                backgroundOptions: { color: margin > 0 ? "#fff" : "transparent" },
             };
 
             if (!this.state.qrCodeInstance) {
