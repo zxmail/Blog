@@ -60,6 +60,7 @@ body {
 /* --- tools.html specific --- */
 .tool-sidebar a.active {
     background-color: #10b981; /* accent color */
+    color: white;
 }
 .tool-sidebar a.active i, .tool-sidebar a.active span {
     color: white !important;
