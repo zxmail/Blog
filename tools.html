@@ -64,6 +64,17 @@
             document.title = `在线工具 - ${this.state.siteSettings?.blogName || '我的博客'}`;
             this.renderMobileSidebar();
             this.renderToolContent();
+
+            // *** NEW: Implemented URL secret key loading ***
+            const urlParams = new URLSearchParams(window.location.search);
+            const secretFromUrl = urlParams.get('secret');
+            if (secretFromUrl && this.state.activeTool === '2fa') {
+                const keyInput = document.getElementById('2fa-key-input');
+                if (keyInput) {
+                    keyInput.value = secretFromUrl;
+                    this.update2FACode(); // Automatically generate code if key is from URL
+                }
+            }
         };
 
         App.setActiveTool = function(toolName) {
@@ -163,7 +174,26 @@
         App.openQrCodeModal = function() { document.getElementById('qr-modal')?.classList.remove('hidden'); }
         App.closeQrCodeModal = function() { document.getElementById('qr-modal')?.classList.add('hidden'); }
 
-        App.generateQRCode = function() { /* Unchanged */ };
+        // *** NEW: Function for the standalone QR Code generator tool ***
+        App.generateQRCode = function() {
+            const textInput = document.getElementById('qr-text-input');
+            const canvasContainer = document.getElementById('qr-canvas-container');
+            if (!textInput || !canvasContainer) return;
+            const text = textInput.value.trim();
+            canvasContainer.innerHTML = ''; 
+            if (text === '') { 
+                canvasContainer.innerHTML = '<p class="text-gray-400">请输入内容以生成二维码</p>'; 
+                return; 
+            }
+            const canvasEl = document.createElement('canvas');
+            canvasContainer.appendChild(canvasEl);
+            QRCode.toCanvas(canvasEl, text, { width: 256, margin: 2 }, (error) => {
+                if (error) { 
+                    canvasContainer.innerHTML = '<p class="text-red-500">二维码生成失败，请重试。</p>'; 
+                    console.error(error); 
+                }
+            });
+        };
 
         Object.assign(App.templates, {
             mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">${content}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
@@ -232,7 +262,27 @@
                     </div>
                 </div>
             `,
-            toolQRCode: () => `...`, 
+            // *** NEW: Template for the standalone QR Code generator tool ***
+            toolQRCode: () => `
+                <div>
+                    <h1 class="text-2xl font-bold mb-1">在线生成二维码(QR码)</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">在下方的文本框中输入您想要生成二维码的内容，可以是网址、文字、联系方式等。</p>
+                    <div class="mb-4">
+                        <textarea id="qr-text-input" rows="4" placeholder="请输入内容..." class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" onkeyup="App.generateQRCode()"></textarea>
+                    </div>
+                    <div id="qr-canvas-container" class="mt-6 p-4 border dark:border-gray-600 rounded-md flex items-center justify-center bg-white" style="min-height: 288px;">
+                        <p class="text-gray-400">请输入内容以生成二维码</p>
+                    </div>
+                     <hr class="my-8 dark:border-gray-700">
+                    <div>
+                        <h2 class="text-xl font-bold mb-2">QR码工具说明</h2>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                            <p><strong>提示帮助：</strong> QR码（快速响应矩阵码）是一种二维条码，可以被智能手机摄像头快速读取。它常用于存储网址、联系信息、Wi-Fi密码等。</p>
+                            <p><strong>数据说明：</strong> 所有二维码均在您的浏览器本地实时生成，输入的内容不会被发送到任何服务器。您可以右键点击生成的二维码图片进行保存。</p>
+                        </div>
+                    </div>
+                </div>
+            `,
             
             qrCodeModal: () => `
                 <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4" onclick="App.closeQrCodeModal()">
