@@ -3,29 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工具箱 - 我的博客</title>
+    <title>在线工具 - 我的博客</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.2.2/dist/otpauth.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        'accent': '#10b981', // Accent color (green)
+                        'accent': '#4ade80', // Green accent color
                     },
                 },
             },
         };
     </script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f3f4f6; }
-        .dark body { background-color: #111827; }
-        .tool-sidebar a.active { background-color: #10b981; color: white; }
-        .dark .tool-sidebar a.active { background-color: #10b981; }
-        .progress-bar { transform-origin: left; transition: transform 0.2s linear; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background-color: #f7fafc;
+        }
+        .dark body {
+            background-color: #1a202c;
+        }
+        .tool-sidebar a.active {
+            background-color: #4ade80; /* Green accent */
+            color: white;
+        }
+        .tool-sidebar a.active i, .tool-sidebar a.active span {
+            color: white !important;
+        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -36,209 +45,197 @@
     <script>
         const App = {
             state: {
-                theme: localStorage.getItem('theme') || 'light',
-                activeTool: '2fa', // Default tool to show
-                totp: {
-                    interval: null,
-                    code: '------',
-                    timeLeft: 0,
-                }
+                // '2fa' or 'qrcode'
+                activeTool: '2fa', 
+                // For 2FA tool
+                totp: null,
+                totpInterval: null,
             },
+            
             init() {
-                this.applyTheme();
                 this.renderPage();
-                this.runActiveToolLogic();
+                this.update2FACode(); // Initial call
             },
-            applyTheme() {
-                if (this.state.theme === 'dark') document.documentElement.classList.add('dark');
-                else document.documentElement.classList.remove('dark');
+            
+            // --- Page Rendering ---
+            renderPage() {
+                const appContainer = document.getElementById('app');
+                appContainer.innerHTML = this.templates.mainLayout();
+                this.renderToolContent();
             },
-            toggleTheme() {
-                this.state.theme = this.state.theme === 'light' ? 'dark' : 'light';
-                localStorage.setItem('theme', this.state.theme);
-                this.applyTheme();
-            },
-            switchTool(toolName, event) {
-                event.preventDefault();
-                this.state.activeTool = toolName;
-                this.renderPage();
-                this.runActiveToolLogic();
-            },
-            runActiveToolLogic() {
-                // Clear any previous intervals
-                if (this.state.totp.interval) clearInterval(this.state.totp.interval);
-                
-                if (this.state.activeTool === '2fa') {
-                    document.getElementById('generate-2fa-btn')?.addEventListener('click', () => this.generate2FA());
-                } else if (this.state.activeTool === 'qrcode') {
-                    const qrInput = document.getElementById('qr-input');
-                    qrInput?.addEventListener('input', () => this.generateQRCode(qrInput.value));
-                    this.generateQRCode(qrInput.value); // Initial generation
+            
+            renderToolContent() {
+                const contentContainer = document.getElementById('tool-content');
+                if (contentContainer) {
+                    if (this.state.activeTool === '2fa') {
+                        contentContainer.innerHTML = this.templates.tool2FA();
+                        this.update2FACode();
+                    } else if (this.state.activeTool === 'qrcode') {
+                        contentContainer.innerHTML = this.templates.toolQRCode();
+                    }
                 }
             },
             
+            // --- Tool Switching ---
+            setActiveTool(toolName) {
+                this.state.activeTool = toolName;
+                this.renderPage();
+            },
+
             // --- 2FA Tool Logic ---
-            generate2FA() {
-                const secretKey = document.getElementById('2fa-secret').value.replace(/\s/g, '').toUpperCase();
-                if (!secretKey) {
-                    alert('请输入2FA密钥!');
+            update2FACode() {
+                const keyInput = document.getElementById('2fa-key-input');
+                const secretKey = keyInput?.value.trim().replace(/\s/g, '');
+
+                const codeDisplay = document.getElementById('2fa-code');
+                const timeDisplay = document.getElementById('2fa-time');
+                const progressDisplay = document.getElementById('2fa-progress');
+
+                if (!secretKey || !codeDisplay || !timeDisplay || !progressDisplay) {
                     return;
                 }
-                
-                if (this.state.totp.interval) clearInterval(this.state.totp.interval);
 
-                const updateTOTP = () => {
-                    try {
-                        const epoch = Math.floor(Date.now() / 1000);
-                        this.state.totp.timeLeft = 30 - (epoch % 30);
-                        this.state.totp.code = this.getTOTP(secretKey);
+                // Clear previous interval
+                if (this.state.totpInterval) {
+                    clearInterval(this.state.totpInterval);
+                }
 
-                        document.getElementById('totp-code').textContent = this.state.totp.code;
-                        document.getElementById('totp-timer').textContent = `${this.state.totp.timeLeft} 秒`;
-                        const progressBar = document.getElementById('totp-progress');
-                        progressBar.style.transform = `scaleX(${this.state.totp.timeLeft / 30})`;
+                try {
+                    this.state.totp = new otpauth.TOTP({
+                        issuer: "ACME",
+                        label: "AzureDiamond",
+                        algorithm: "SHA1",
+                        digits: 6,
+                        period: 30,
+                        secret: secretKey,
+                    });
+
+                    const update = () => {
+                        const token = this.state.totp.generate();
+                        const remainingTime = 30 - (Math.floor(Date.now() / 1000) % 30);
+                        const progress = (remainingTime / 30) * 100;
                         
-                        if (this.state.totp.timeLeft < 6) {
-                            progressBar.classList.remove('bg-accent');
-                            progressBar.classList.add('bg-red-500');
+                        codeDisplay.textContent = token;
+                        timeDisplay.textContent = `剩余时间: ${remainingTime} 秒`;
+                        progressDisplay.style.width = `${progress}%`;
+                        
+                        if(remainingTime < 5) {
+                            codeDisplay.classList.add('text-red-500');
                         } else {
-                            progressBar.classList.remove('bg-red-500');
-                            progressBar.classList.add('bg-accent');
+                            codeDisplay.classList.remove('text-red-500');
                         }
+                    };
+                    
+                    update(); // Initial call
+                    this.state.totpInterval = setInterval(update, 1000);
 
-                    } catch (e) {
-                        console.error("2FA Error:", e);
-                        clearInterval(this.state.totp.interval);
-                        alert('密钥无效或格式错误，请检查。');
-                    }
-                };
-
-                updateTOTP(); // Initial call
-                this.state.totp.interval = setInterval(updateTOTP, 1000);
-            },
-            getTOTP(secret) {
-                const key = this.base32tohex(secret);
-                const epoch = Math.floor(Date.now() / 1000.0);
-                const time = this.leftpad(Math.floor(epoch / 30).toString(16), 16, '0');
-                
-                const hmac = CryptoJS.HmacSHA1(CryptoJS.enc.Hex.parse(time), CryptoJS.enc.Hex.parse(key));
-                const offset = parseInt(hmac.toString().substring(hmac.toString().length - 1), 16);
-                const otp = (parseInt(hmac.toString().substring(offset * 2, offset * 2 + 8), 16) & 0x7fffffff) + '';
-                return otp.substring(otp.length - 6, otp.length);
-            },
-            base32tohex(base32) {
-                const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-                let bits = "";
-                let hex = "";
-                for (let i = 0; i < base32.length; i++) {
-                    const val = base32chars.indexOf(base32.charAt(i).toUpperCase());
-                    bits += this.leftpad(val.toString(2), 5, '0');
+                } catch (error) {
+                    codeDisplay.textContent = '密钥无效';
+                    timeDisplay.textContent = '请输入有效的Base32密钥';
+                    progressDisplay.style.width = '0%';
                 }
-                for (let i = 0; i + 4 <= bits.length; i += 4) {
-                    const chunk = bits.substr(i, 4);
-                    hex += parseInt(chunk, 2).toString(16);
-                }
-                return hex;
-            },
-            leftpad(str, len, pad) {
-                if (len + 1 >= str.length) {
-                    str = Array(len + 1 - str.length).join(pad) + str;
-                }
-                return str;
             },
 
             // --- QR Code Tool Logic ---
-            generateQRCode(text) {
-                const qrContainer = document.getElementById('qr-code-container');
-                if (!qrContainer) return;
-                qrContainer.innerHTML = ''; // Clear previous QR code
-                try {
-                    const typeNumber = 0; // Auto-detect
-                    const errorCorrectionLevel = 'L';
-                    const qr = qrcode(typeNumber, errorCorrectionLevel);
-                    qr.addData(text || ' '); // Add a space if empty to avoid errors
-                    qr.make();
-                    qrContainer.innerHTML = qr.createImgTag(6, 8); // (cellSize, margin)
-                    qrContainer.firstChild.classList.add('w-full', 'h-auto');
-                } catch (e) {
-                    console.error("QR Code Error:", e);
-                    qrContainer.textContent = '生成二维码失败。';
+            generateQRCode() {
+                const textInput = document.getElementById('qr-text-input');
+                const canvas = document.getElementById('qr-canvas');
+                
+                if (!textInput || !canvas) return;
+
+                const text = textInput.value.trim();
+                if (text === '') {
+                    canvas.innerHTML = '<p class="text-gray-400">请输入内容以生成二维码</p>';
+                    return;
                 }
+                
+                canvas.innerHTML = ''; // Clear previous QR Code
+                QRCode.toCanvas(canvas, text, { width: 256 }, function (error) {
+                    if (error) {
+                        canvas.innerHTML = '<p class="text-red-500">二维码生成失败，请重试。</p>';
+                        console.error(error);
+                    }
+                });
             },
-
-            renderPage() {
-                document.getElementById('app').innerHTML = this.templates.mainLayout();
-            },
-
+            
             templates: {
                 mainLayout: () => `
-                    ${App.templates.sidebar()}
-                    <main class="flex-1 p-6 md:p-8 overflow-y-auto">
-                        ${App.templates.toolContent()}
+                    ${App.templates.toolSidebar()}
+                    <main class="flex-1 bg-white dark:bg-gray-800 p-6 sm:p-8 overflow-y-auto">
+                        <div id="tool-content">
+                            </div>
                     </main>
                 `,
-                sidebar: () => `
-                    <aside class="w-24 bg-white dark:bg-gray-800 flex-shrink-0 flex flex-col items-center py-6 space-y-6">
-                        <div class="text-accent text-2xl font-bold">
-                           <a href="index.html"><i class="fas fa-home"></i></a>
+                toolSidebar: () => `
+                    <aside class="w-24 bg-gray-50 dark:bg-gray-900 p-4 flex flex-col items-center space-y-6">
+                        <div class="text-center">
+                             <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center mb-2">
+                                <i class="fas fa-shield-check text-2xl text-white"></i>
+                            </div>
+                            <span class="font-bold text-sm">2FA工具</span>
                         </div>
                         <nav class="tool-sidebar flex flex-col items-center space-y-4">
-                            <a href="#" onclick="App.switchTool('2fa', event)" class="${App.state.activeTool === '2fa' ? 'active' : ''} flex flex-col items-center text-center text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent transition-colors p-2 rounded-lg">
-                                <i class="fas fa-shield-check text-2xl mb-1"></i>
-                                <span class="text-xs font-medium">2FA工具</span>
+                            <a href="#" onclick="App.setActiveTool('2fa')" class="flex flex-col items-center p-3 rounded-lg ${App.state.activeTool === '2fa' ? 'active' : ''}">
+                                <i class="fas fa-user-shield text-2xl text-gray-500"></i>
+                                <span class="text-xs mt-1 text-gray-600 dark:text-gray-400">2FA验证</span>
                             </a>
-                            <a href="#" onclick="App.switchTool('qrcode', event)" class="${App.state.activeTool === 'qrcode' ? 'active' : ''} flex flex-col items-center text-center text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent transition-colors p-2 rounded-lg">
-                                <i class="fas fa-qrcode text-2xl mb-1"></i>
-                                <span class="text-xs font-medium">二维码生成</span>
+                            <a href="#" onclick="App.setActiveTool('qrcode')" class="flex flex-col items-center p-3 rounded-lg ${App.state.activeTool === 'qrcode' ? 'active' : ''}">
+                                <i class="fas fa-qrcode text-2xl text-gray-500"></i>
+                                <span class="text-xs mt-1 text-gray-600 dark:text-gray-400">在线生成QR码</span>
                             </a>
                         </nav>
-                        <div class="mt-auto">
-                           <button onclick="App.toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-accent dark:hover:text-accent text-2xl">
-                              <i class="${App.state.theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'}"></i>
-                           </button>
-                        </div>
                     </aside>
                 `,
-                toolContent: () => {
-                    if (App.state.activeTool === '2fa') return App.templates.tool2FA();
-                    if (App.state.activeTool === 'qrcode') return App.templates.toolQRCode();
-                    return `<div>请选择一个工具</div>`;
-                },
                 tool2FA: () => `
-                    <div class="max-w-3xl mx-auto">
-                        <h1 class="text-2xl font-bold mb-2">2FA 验证</h1>
-                        <p class="text-gray-500 dark:text-gray-400 mb-6">双因素验证(2FA)动态密码获取工具，请将密钥信息粘贴到输入框即可获取。</p>
-                        
+                    <div>
+                        <h1 class="text-2xl font-bold mb-2">2FA验证</h1>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">双因素验证(2FA)在线工具（相当于谷歌身份验证器），使用前请将密钥信息复制在下方即可。</p>
+
                         <div class="mb-4">
-                            <input id="2fa-secret" type="text" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" placeholder="请输入2FA密钥 (Secret Key)">
+                            <input id="2fa-key-input" type="text" placeholder="请在此处输入2FA密钥 (Secret Key)" class="w-full px-4 py-3 border-2 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-accent">
                         </div>
+                        <button onclick="App.update2FACode()" class="bg-accent text-white font-bold px-6 py-3 rounded-md hover:opacity-90">点击获取验证码</button>
                         
-                        <button id="generate-2fa-btn" class="bg-accent text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-90">点击获取验证码</button>
-                        
-                        <div class="mt-6 p-4 border-t dark:border-gray-700">
-                           <p class="text-sm text-gray-500 dark:text-gray-400">当前验证码：<span id="totp-code" class="font-mono text-2xl font-bold text-red-500 tracking-widest ml-2">${App.state.totp.code}</span></p>
-                           <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">剩余时间：<span id="totp-timer">${App.state.totp.timeLeft} 秒</span></p>
-                           <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                               <div id="totp-progress" class="bg-accent h-2 rounded-full progress-bar" style="transform: scaleX(0);"></div>
-                           </div>
+                        <div class="mt-6 p-4 border dark:border-gray-700 rounded-md">
+                            <p class="text-sm text-gray-500">当前验证码 (已实时刷新):</p>
+                            <p id="2fa-code" class="text-4xl font-mono font-bold my-2 tracking-widest">------</p>
+                            <p id="2fa-time" class="text-sm text-gray-500 mb-2">等待输入密钥...</p>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                <div id="2fa-progress" class="bg-accent h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
+                            </div>
+                        </div>
+
+                        <hr class="my-8 dark:border-gray-700">
+
+                        <div>
+                            <h2 class="text-xl font-bold mb-2">2FA工具说明</h2>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                                <p><strong>提示帮助：</strong> 欢迎使用在线两步验证码生成工具，粘贴或输入您的密钥即可验证。否则默认输入框的密钥，是本站提供的虚拟测试密钥，生存期为永久。</p>
+                                <p><strong>数据说明：</strong> 所有验证过程均在您的浏览器本地完成，密钥信息不会上传至网络服务器，保障您的数据安全。刷新页面或关闭浏览器，密钥将会自动清空。</p>
+                            </div>
                         </div>
                     </div>
                 `,
                 toolQRCode: () => `
-                     <div class="max-w-3xl mx-auto">
-                        <h1 class="text-2xl font-bold mb-2">在线生成二维码 (QR Code)</h1>
-                        <p class="text-gray-500 dark:text-gray-400 mb-6">在下方文本框中输入任何文本或网址，将即时生成二维码。</p>
+                    <div>
+                        <h1 class="text-2xl font-bold mb-2">在线生成二维码(QR码)</h1>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">在下方的文本框中输入您想要生成二维码的内容，可以是网址、文字、联系方式等。</p>
+
+                        <div class="mb-4">
+                            <textarea id="qr-text-input" rows="4" placeholder="请输入内容..." class="w-full px-4 py-3 border-2 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-accent" onkeyup="App.generateQRCode()"></textarea>
+                        </div>
                         
-                        <div class="grid md:grid-cols-2 gap-6 items-start">
-                            <div>
-                                <label for="qr-input" class="block text-sm font-medium mb-1">输入内容</label>
-                                <textarea id="qr-input" rows="8" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" placeholder="输入文本或网址..."></textarea>
-                            </div>
-                            <div class="text-center">
-                                <label class="block text-sm font-medium mb-1">生成的二维码</label>
-                                <div id="qr-code-container" class="p-4 border dark:border-gray-600 rounded-md bg-white w-full max-w-[256px] mx-auto">
-                                    </div>
-                                <p class="text-xs text-gray-400 mt-2">可右键点击图片保存</p>
+                        <div class="mt-6 p-4 border dark:border-gray-700 rounded-md flex items-center justify-center" style="min-height: 288px;">
+                            <canvas id="qr-canvas"><p class="text-gray-400">请输入内容以生成二维码</p></canvas>
+                        </div>
+
+                         <hr class="my-8 dark:border-gray-700">
+
+                        <div>
+                            <h2 class="text-xl font-bold mb-2">QR码工具说明</h2>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                                <p><strong>提示帮助：</strong> QR码（快速响应矩阵码）是一种二维条码，可以被智能手机摄像头快速读取。它常用于存储网址、联系信息、Wi-Fi密码等。</p>
+                                <p><strong>数据说明：</strong> 所有二维码均在您的浏览器本地实时生成，输入的内容不会被发送到任何服务器。您可以右键点击生成的二维码图片进行保存。</p>
                             </div>
                         </div>
                     </div>
