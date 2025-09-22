@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
     
     <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
@@ -57,7 +56,7 @@
             desktopSidebar: null,
             twoFaTimer: null,
             currentTotpObject: null,
-            qrCodeInstance: null // To hold the QR code instance
+            qrCodeInstance: null 
         });
 
         App.init = function() {
@@ -166,7 +165,6 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
-        // REWRITTEN: Uses qr-code-styling for sharp, clear, self-contained QR codes
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
@@ -204,7 +202,7 @@
         App.router = async function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             this.state.currentTotpObject = null;
-            this.state.qrCodeInstance = null; // Clear instance on route change
+            this.state.qrCodeInstance = null;
             const appContainer = document.getElementById('app');
             const hash = window.location.hash.slice(1) || this.state.tools[0].id;
             const toolExists = this.state.tools.some(t => t.id === hash);
@@ -295,10 +293,10 @@
                                 <div>
                                     <label for="qr-error-level" class="block text-xs font-medium mb-1">纠错级别:</label>
                                     <select id="qr-error-level" onchange="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
-                                        <option value="L">L</option>
-                                        <option value="M" selected>M</option>
-                                        <option value="Q">Q</option>
-                                        <option value="H">H</option>
+                                        <option value="L">L (7%)</option>
+                                        <option value="M" selected>M (15%)</option>
+                                        <option value="Q">Q (25%)</option>
+                                        <option value="H">H (30%)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -312,7 +310,7 @@
                                 <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
                             </div>
                             <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-white p-1">
-                                <div id="qr-code-output" class="w-full h-full"></div>
+                                <div id="qr-code-output" class="w-full h-full flex items-center justify-center"></div>
                             </div>
                         </div>
                     </div>
