@@ -53,7 +53,7 @@
             activeToolId: pageTools[0].id,
             desktopSidebar: null,
             twoFaTimer: null,
-            currentTotpObject: null // To store the TOTP instance
+            currentTotpObject: null
         });
 
         App.init = function() {
@@ -80,7 +80,6 @@
             }
         };
         
-        // NEW: Function to show a toast notification
         App.showToast = function(title, message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -90,19 +89,16 @@
             setTimeout(() => { toast.remove(); }, 3000);
         };
 
-        // NEW: Functions to control the QR Code Modal
         App.openQrCodeModal = function() {
             if (!this.state.currentTotpObject) {
                 alert('请先输入有效的密钥并点击“点击获取验证码”！');
                 return;
             }
             const qrCanvas = document.getElementById('qrcode-canvas');
-            qrCanvas.innerHTML = ''; // Clear previous QR code
+            qrCanvas.innerHTML = '';
             
-            // Generate the otpauth:// URI
             const uri = this.state.currentTotpObject.toString();
 
-            // Create a new QR Code
             new QRCode(qrCanvas, {
                 text: uri,
                 width: 220,
@@ -120,36 +116,40 @@
 
         App.handle2FAGenerate = function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
+            this.state.currentTotpObject = null;
 
             const secretInput = document.getElementById('2fa-secret');
             const secret = secretInput.value.trim().replace(/\s/g, '');
 
+            // UPDATED: Changed alert to inline text
             if (!secret) {
-                alert('请输入密钥！');
+                document.getElementById('2fa-code').textContent = '请输入密钥！';
+                document.getElementById('2fa-time').textContent = '--';
+                document.getElementById('2fa-secret-display').textContent = '';
                 return;
             }
 
             try {
                 const totp = new OTPAuth.TOTP({
                     issuer: "2FA工具",
-                    label: secret.slice(0, 16), // Use a portion of the secret as a label
+                    label: secret.slice(0, 16),
                     algorithm: "SHA1",
                     digits: 6,
                     period: 30,
                     secret: OTPAuth.Secret.fromBase32(secret),
                 });
                 
-                this.state.currentTotpObject = totp; // Store the object for QR code generation
+                this.state.currentTotpObject = totp;
                 this.start2FATimer(totp);
                 document.getElementById('2fa-secret-display').textContent = secret;
 
             } catch (error) {
                 this.state.currentTotpObject = null;
                 console.error("Error generating TOTP:", error);
-                alert('密钥无效。请确保您输入的是正确的Base32编码密钥。');
                 document.getElementById('2fa-code').textContent = '密钥错误';
                 document.getElementById('2fa-time').textContent = '0';
                 document.getElementById('2fa-secret-display').textContent = '';
+                // No alert here either for consistency
             }
         };
 
@@ -161,7 +161,6 @@
                 document.getElementById('2fa-code').textContent = token;
                 document.getElementById('2fa-time').textContent = remainingTime;
 
-                // Copy the code when it's first generated or refreshes
                 if (remainingTime === 30 || !this.state.twoFaTimer) {
                      navigator.clipboard.writeText(token).then(() => {
                         this.showToast("已成功获取验证码哦~", "已成功复制");
@@ -171,7 +170,7 @@
                 }
             };
             
-            update(); // Run once immediately to generate and copy
+            update();
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
 
