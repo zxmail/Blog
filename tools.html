@@ -165,11 +165,12 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
+        // REWRITTEN: Logic to handle margin in pixels
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
-            let size = parseInt(document.getElementById('qr-size').value, 10);
-            let margin = parseInt(document.getElementById('qr-margin').value, 10);
+            let totalSize = parseInt(document.getElementById('qr-size').value, 10);
+            let marginInPx = parseInt(document.getElementById('qr-margin').value, 10);
             const outputDiv = document.getElementById('qr-code-output');
             
             if (!text) {
@@ -177,18 +178,30 @@
                 this.state.qrCodeInstance = null;
                 return;
             }
-            if (isNaN(size) || size <= 0) size = 80;
-            if (isNaN(margin) || margin < 0) margin = 0;
+
+            if (isNaN(totalSize) || totalSize <= 20) totalSize = 80;
+            if (isNaN(marginInPx) || marginInPx < 0) marginInPx = 0;
+
+            const qrCodeSize = totalSize - (marginInPx * 2);
+
+            if (qrCodeSize <= 0) {
+                outputDiv.innerHTML = '';
+                this.state.qrCodeInstance = null;
+                return;
+            }
+
+            outputDiv.style.padding = `${marginInPx}px`;
+            outputDiv.style.backgroundColor = '#fff'; // Ensure padding area is white
 
             const options = {
-                width: size,
-                height: size,
+                width: qrCodeSize,
+                height: qrCodeSize,
                 data: text,
-                margin: margin,
+                margin: 0, // Library margin is 0, we handle it via CSS padding
                 qrOptions: { errorCorrectionLevel: errorLevel },
                 dotsOptions: { color: "#000", type: "square" },
                 cornersSquareOptions: { type: "square" },
-                backgroundOptions: { color: margin > 0 ? "#fff" : "transparent" },
+                backgroundOptions: { color: "#fff" },
             };
 
             if (!this.state.qrCodeInstance) {
@@ -217,7 +230,6 @@
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
             this.initStickySidebar();
             if (this.state.activeToolId === 'qrcode') {
-                // Generate a QR code on initial load with default values
                 document.getElementById('qr-text-input').value = 'https://blog-9ce.pages.dev/';
                 this.handleGenerateQRCode();
             }
@@ -302,8 +314,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="qr-margin" class="block text-xs font-medium mb-1">边缘留白 (Margin):</label>
-                                    <input type="number" id="qr-margin" value="1" min="0" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                    <label for="qr-margin" class="block text-xs font-medium mb-1">边缘留白 (px):</label>
+                                    <input type="number" id="qr-margin" value="8" min="0" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                 </div>
                                 <div>
                                     <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
@@ -312,7 +324,7 @@
                                 <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
                             </div>
                             <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100">
-                                <div id="qr-code-output" class="w-full h-full flex items-center justify-center"></div>
+                                <div id="qr-code-output"></div>
                             </div>
                         </div>
                     </div>
