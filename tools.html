@@ -17,7 +17,6 @@
             theme: {
                 extend: {
                     colors: {
-                        // Using a green color similar to the image
                         'accent': '#28a745', 
                     },
                 },
@@ -25,7 +24,6 @@
         };
     </script>
     <style>
-        /* Additional style for a slightly different background */
         body { background-color: #f7fafc; }
         .dark body { background-color: #1a202c; }
     </style>
@@ -35,14 +33,15 @@
     <div id="app" class="flex flex-col min-h-screen"></div>
     <div id="sidebar-container"></div>
     <div id="search-modal-container"></div>
-    <div id="modal-container"></div> <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center hidden">
+    <div id="modal-container"></div>
+
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center hidden">
       <i class="far fa-arrow-up"></i>
     </button>
     
     <script src="main.js"></script>
 
     <script>
-        // Extend the global App object
         Object.assign(App.state, {
             activeTool: '2fa',
             totp: null,
@@ -53,7 +52,6 @@
             this.applyTheme();
             this.renderMobileSidebar();
             this.renderSearchModal();
-            // Render the modal container once on init
             document.getElementById('modal-container').innerHTML = this.templates.qrCodeModal();
             this.router();
             window.addEventListener('scroll', () => this.handleScroll());
@@ -62,15 +60,12 @@
         App.router = async function() {
             const appContainer = document.getElementById('app');
             await Promise.all([ this.fetchNavIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
-            
             appContainer.innerHTML = this.templates.mainLayout(this.templates.toolsPage());
-            
             document.title = `在线工具 - ${this.state.siteSettings?.blogName || '我的博客'}`;
             this.renderMobileSidebar();
-            this.renderToolContent(); // Render the initial tool
+            this.renderToolContent();
         };
 
-        // --- Tool Specific Methods ---
         App.setActiveTool = function(toolName) {
             if(this.state.totpInterval) clearInterval(this.state.totpInterval);
             this.state.activeTool = toolName;
@@ -90,7 +85,6 @@
             } else if (this.state.activeTool === 'qrcode') {
                 contentContainer.innerHTML = this.templates.toolQRCode();
             }
-            // Add other tools here if needed
         };
 
         App.update2FACode = function() {
@@ -165,9 +159,8 @@
         App.openQrCodeModal = function() { document.getElementById('qr-modal')?.classList.remove('hidden'); }
         App.closeQrCodeModal = function() { document.getElementById('qr-modal')?.classList.add('hidden'); }
 
-        App.generateQRCode = function() { /* ... from previous turn, unchanged ... */ };
+        App.generateQRCode = function() { /* Unchanged */ };
 
-        // Page-specific templates
         Object.assign(App.templates, {
             mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">${content}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
             toolsPage: () => `<div class="flex flex-col md:flex-row gap-6">${App.templates.toolSidebar()}<div id="tool-content-wrapper" class="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow p-6 sm:p-8"></div></div>`,
@@ -175,23 +168,23 @@
             toolSidebar: () => `
                 <aside class="w-full md:w-52 flex-shrink-0">
                     <nav class="tool-sidebar flex flex-row md:flex-col md:space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
-                        <a href="#" onclick="App.setActiveTool('2fa')" data-tool="2fa" class="flex flex-col items-center justify-center text-center p-4 rounded-lg active bg-accent text-white w-24 md:w-full flex-shrink-0 group">
+                        <a href="#" onclick="App.setActiveTool('2fa')" data-tool="2fa" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] active bg-accent text-white w-24 md:w-full flex-shrink-0 group">
                             <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-green-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-user-shield text-2xl text-accent group-[.active]:text-white"></i></div>
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">2FA工具</span>
                         </a>
-                        <a href="#" onclick="App.setActiveTool('qrcode')" data-tool="qrcode" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group">
+                        <a href="#" onclick="App.setActiveTool('qrcode')" data-tool="qrcode" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group">
                              <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-green-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-qrcode text-2xl text-accent group-[.active]:text-white"></i></div>
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">在线生成二维码</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
                              <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-file-alt text-2xl text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">文本处理</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
                              <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-image text-2xl text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">图片处理</span>
                         </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
+                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-[0.35rem] w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
                              <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-ellipsis-h text-2xl text-gray-400"></i></div>
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">更多工具</span>
                         </a>
@@ -205,9 +198,9 @@
                     <p class="text-gray-500 dark:text-gray-400 mb-6">双重验证/二步验证码获取工具 (相当于谷歌身份验证器的网页版)，使用时选择您的方式输入密钥即可。</p>
                     
                     <div class="mb-4">
-                        <input id="2fa-key-input" type="text" placeholder="点击此处输入密钥" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700">
+                        <input id="2fa-key-input" type="text" placeholder="点击此处输入密钥" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-[0.35rem] focus:outline-none focus:border-accent dark:bg-gray-700">
                     </div>
-                    <button onclick="App.update2FACode()" class="bg-accent text-white font-bold px-5 py-2.5 rounded-md hover:opacity-90 text-sm">点击获取验证码</button>
+                    <button onclick="App.update2FACode()" class="bg-accent text-white font-bold px-5 py-2.5 rounded-[0.35rem] hover:opacity-90 text-sm">点击获取验证码</button>
                     
                     <div class="mt-6 space-y-3 text-sm">
                         <p><strong>双重密钥为:</strong> <span id="2fa-key-display" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">...</span></p>
@@ -222,7 +215,7 @@
                     </div>
 
                     <div class="mt-4">
-                        <button onclick="App.generateAndShow2FAQRCode()" class="bg-gray-600 text-white font-bold px-5 py-2.5 rounded-md hover:bg-gray-700 text-sm">生成二维码</button>
+                        <button onclick="App.generateAndShow2FAQRCode()" class="bg-gray-600 text-white font-bold px-5 py-2.5 rounded-[0.35rem] hover:bg-gray-700 text-sm">生成二维码</button>
                     </div>
 
                     <hr class="my-8 dark:border-gray-700">
@@ -237,7 +230,7 @@
                     </div>
                 </div>
             `,
-            toolQRCode: () => `...`, // This template can be kept from the previous turn
+            toolQRCode: () => `...`,
             
             qrCodeModal: () => `
                 <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4" onclick="App.closeQrCodeModal()">
@@ -251,7 +244,6 @@
             `
         });
 
-        // Initialize the App
         App.init();
     </script>
 </body>
