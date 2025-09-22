@@ -42,7 +42,6 @@
     <script>
         const pageTools = [
             { id: '2fa', name: '2FA工具', icon: 'fas fa-shield-check', template: 'tool2FAContent' },
-            // UPDATED: Pointing to the new QR code template
             { id: 'qrcode', name: '在线生成二维码', icon: 'fas fa-qrcode', template: 'toolQRCodeContent' },
             { id: 'text', name: '文本处理', icon: 'fas fa-file-alt', template: 'toolComingSoonContent' },
             { id: 'image', name: '图片处理', icon: 'fas fa-image', template: 'toolComingSoonContent' },
@@ -173,20 +172,20 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
-        // NEW: Function to generate the QR Code for the QR tool
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
             let size = parseInt(document.getElementById('qr-size').value, 10);
             const outputDiv = document.getElementById('qr-code-output');
 
-            outputDiv.innerHTML = ''; // Clear previous QR code
+            outputDiv.innerHTML = '';
             
             if (!text) {
-                return; // Do nothing if text is empty
+                return;
             }
-            if (isNaN(size) || size < 50) {
-                size = 200; // Default size
+            // UPDATED: Removed the minimum size validation to allow for smaller QR codes.
+            if (isNaN(size) || size <= 0) {
+                size = 200; // Set a reasonable default if input is invalid.
             }
 
             new QRCode(outputDiv, {
@@ -218,7 +217,6 @@
             
             this.initStickySidebar();
 
-            // If the active tool is the QR code generator, trigger an initial generation
             if (this.state.activeToolId === 'qrcode') {
                 this.handleGenerateQRCode();
             }
@@ -287,7 +285,6 @@
                      <div class="text-center mt-8 text-xs text-gray-400">©2025 在线工具</div>
                 </div>
             `,
-            // NEW: Template for the QR Code Generator tool
             toolQRCodeContent: () => `
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <h2 class="text-xl font-semibold mb-6">在线生成二维码(QR码)</h2>
