@@ -165,7 +165,7 @@
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
         
-        // REWRITTEN: Logic to handle margin in pixels
+        // THIS IS THE CORRECTED FUNCTION
         App.handleGenerateQRCode = function() {
             const text = document.getElementById('qr-text-input').value;
             const errorLevel = document.getElementById('qr-error-level').value;
@@ -178,7 +178,6 @@
                 this.state.qrCodeInstance = null;
                 return;
             }
-
             if (isNaN(totalSize) || totalSize <= 20) totalSize = 80;
             if (isNaN(marginInPx) || marginInPx < 0) marginInPx = 0;
 
@@ -190,18 +189,19 @@
                 return;
             }
 
+            // Apply the pixel margin as CSS padding to the container
             outputDiv.style.padding = `${marginInPx}px`;
-            outputDiv.style.backgroundColor = '#fff'; // Ensure padding area is white
+            outputDiv.style.backgroundColor = '#fff'; // Ensure the padding area is white
 
             const options = {
                 width: qrCodeSize,
                 height: qrCodeSize,
                 data: text,
-                margin: 0, // Library margin is 0, we handle it via CSS padding
+                margin: 0, // Library margin is set to 0, we control it with CSS
                 qrOptions: { errorCorrectionLevel: errorLevel },
                 dotsOptions: { color: "#000", type: "square" },
                 cornersSquareOptions: { type: "square" },
-                backgroundOptions: { color: "#fff" },
+                backgroundOptions: { color: "#fff" }, // QR code's own background
             };
 
             if (!this.state.qrCodeInstance) {
