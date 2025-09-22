@@ -3,29 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>在线工具 - 我的博客</title>
+    <title>我的工具箱</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://gravatar.azure.cc/static/lib/fontawesome5pro/css/all.min.css?v=1.5.8">
-    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.2.2/dist/otpauth.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    
-    <link rel="stylesheet" href="style.css">
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'accent': '#28a745', 
-                    },
-                },
-            },
-        };
+        tailwind.config = { darkMode: 'class' };
     </script>
     <style>
-        body { background-color: #f7fafc; }
-        .dark body { background-color: #1a202c; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .content-area { font-size: 15px; line-height: 1.7; color: #606266; }
+        .dark .content-area { color: #d1d5db; }
+        .content-area a { color: #3b82f6; text-decoration: underline; }
+        .dark .content-area a { color: #60a5fa; }
+        #back-to-top { position: fixed; bottom: 20%; right: 2rem; display: none; width: 38px; height: 38px; border-radius: 3px; background-color: rgb(188 188 188); color: #1e1e1e; transition: background-color: 0.3s ease, color: 0.3s ease; }
+        #back-to-top:hover { background-color: rgb(123 123 123); color: #fff; }
+        #back-to-top i { font-size: 15px; font-weight: 400; }
+        body { background-color: #f5f5f5; }
+        .dark body { background-color: #111827; }
+        .divide-gray-200 > :not([hidden]) ~ :not([hidden]), .border-gray-200 { border-color: rgb(245 245 245 / 1) !important; }
+        .dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]), .dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
+        .rounded-lg { border-radius: 0.2rem !important; }
+        .rounded-md { border-radius: 0.1rem !important; }
+        .swiper-button-next, .swiper-button-prev { color: #ffffff; background-color: rgba(0,0,0,0.25); width: 44px; height: 44px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease, background-color: 0.3s ease; }
+        .swiper:hover .swiper-button-next, .swiper:hover .swiper-button-prev { opacity: 1; }
+        .swiper-button-next:hover, .swiper-button-prev:hover { background-color: rgba(0,0,0,0.4); }
+        .swiper-button-next:after, .swiper-button-prev:after { font-size: 20px; font-weight: bold; }
+        .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
+        .swiper-pagination-bullet-active { background-color: #ffffff; }
+        .group .dropdown-menu { display: none; }
+        .group:hover > .dropdown-menu { display: block; }
+        .dropdown-menu .sub-menu { display: none; }
+        .dropdown-menu li:hover > .sub-menu { display: block; }
+        .dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
+        .sub-menu { top: -0.25rem; left: 100%; }
+        #sidebar-menu .rotate-90 { transform: rotate(90deg); }
+        #sidebar-menu { font-size: 13px; }
+
+        @media (max-width: 639.98px) {
+            body .p-4 {
+                padding: 0.5rem;
+            }
+            body .p-6 {
+                padding: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200">
@@ -33,269 +60,419 @@
     <div id="app" class="flex flex-col min-h-screen"></div>
     <div id="sidebar-container"></div>
     <div id="search-modal-container"></div>
-    <div id="modal-container"></div>
-
-    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center hidden">
+    
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="shadow-lg flex items-center justify-center">
       <i class="far fa-arrow-up"></i>
     </button>
-    
-    <script src="main.js"></script>
 
     <script>
-        Object.assign(App.state, {
-            activeTool: '2fa',
-            totp: null,
-            totpInterval: null,
-        });
-
-        App.init = function() {
-            this.applyTheme();
-            this.renderMobileSidebar();
-            this.renderSearchModal();
-            document.getElementById('modal-container').innerHTML = this.templates.qrCodeModal();
-            this.router();
-            window.addEventListener('scroll', () => this.handleScroll());
-        };
-
-        App.router = async function() {
-            const appContainer = document.getElementById('app');
-            await Promise.all([ this.fetchNavIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
-            appContainer.innerHTML = this.templates.mainLayout(this.templates.toolsPage());
-            document.title = `在线工具 - ${this.state.siteSettings?.blogName || '我的博客'}`;
-            this.renderMobileSidebar();
-            this.renderToolContent();
-
-            // *** NEW: Implemented URL secret key loading ***
-            const urlParams = new URLSearchParams(window.location.search);
-            const secretFromUrl = urlParams.get('secret');
-            if (secretFromUrl && this.state.activeTool === '2fa') {
-                const keyInput = document.getElementById('2fa-key-input');
-                if (keyInput) {
-                    keyInput.value = secretFromUrl;
-                    this.update2FACode(); // Automatically generate code if key is from URL
+        const App = {
+            config: {
+                workerUrl: 'https://blog.xy193.workers.dev'
+            },
+            state: {
+                posts: [],
+                navItems: [],
+                tags: [],
+                categories: {},
+                recentPosts: [],
+                friendlyLinks: [],
+                recentComments: [],
+                siteStats: null,
+                siteSettings: null,
+                comments: {}, 
+                theme: localStorage.getItem('theme') || 'light',
+                carouselData: null,
+                desktopSidebar: null,
+            },
+            helpers: {
+                stripHtmlAndTruncate: (html, length) => { const doc = new DOMParser().parseFromString(html, 'text/html'); const text = doc.body.textContent || ""; return text.length > length ? text.substring(0, length) + '...' : text; },
+                renderIcon: (iconString) => {
+                    if (!iconString) return '<i class="fa-fw"></i>';
+                    if (iconString.trim().startsWith('<svg')) return iconString;
+                    return `<i class="${iconString} fa-fw"></i>`;
                 }
-            }
-        };
-
-        App.setActiveTool = function(toolName) {
-            if(this.state.totpInterval) clearInterval(this.state.totpInterval);
-            this.state.activeTool = toolName;
-            this.renderToolContent();
-            document.querySelectorAll('.tool-sidebar a').forEach(a => a.classList.remove('active', 'bg-accent', 'text-white'));
-            const activeLink = document.querySelector(`.tool-sidebar a[data-tool="${toolName}"]`);
-            if (activeLink) {
-                 activeLink.classList.add('active', 'bg-accent', 'text-white');
-            }
-        };
-
-        App.renderToolContent = function() {
-            const contentContainer = document.getElementById('tool-content-wrapper');
-            if (!contentContainer) return;
-            if (this.state.activeTool === '2fa') {
-                contentContainer.innerHTML = this.templates.tool2FA();
-            } else if (this.state.activeTool === 'qrcode') {
-                contentContainer.innerHTML = this.templates.toolQRCode();
-            }
-        };
-
-        App.update2FACode = function() {
-            const resultArea = document.getElementById('2fa-result-container');
-            if (resultArea) resultArea.classList.remove('hidden');
-
-            const keyInput = document.getElementById('2fa-key-input');
-            const secretKey = keyInput?.value.trim().replace(/\s/g, '');
-            const codeDisplay = document.getElementById('2fa-code');
-            const timeDisplay = document.getElementById('2fa-time');
-            const progressDisplay = document.getElementById('2fa-progress');
-            const keyDisplay = document.getElementById('2fa-key-display');
-            const statusDisplay = document.getElementById('2fa-status');
-
-            if (!keyInput || !codeDisplay || !timeDisplay || !progressDisplay || !keyDisplay) return; 
-            if (this.state.totpInterval) clearInterval(this.state.totpInterval);
+            },
+            init() {
+                this.applyTheme();
+                this.renderMobileSidebar();
+                this.renderSearchModal();
+                window.addEventListener('hashchange', () => this.router());
+                window.addEventListener('load', () => this.router());
+                window.addEventListener('scroll', () => this.handleScroll());
+            },
+            applyTheme() { if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); },
+            toggleTheme() { this.state.theme = this.state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', this.state.theme); this.applyTheme(); this.renderMobileSidebar(); const btn = document.getElementById('theme-toggle-button'); if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; },
             
-            keyDisplay.textContent = secretKey || '...';
+            // --- Mobile Sidebar & Search Modal Methods ---
+            renderMobileSidebar() {
+                 document.getElementById('sidebar-container').innerHTML = this.templates.mobileSidebar();
+            },
+            openSidebar() {
+                document.getElementById('sidebar-overlay')?.classList.remove('hidden');
+                document.getElementById('sidebar-menu')?.classList.remove('-translate-x-full');
+            },
+            closeSidebar() {
+                document.getElementById('sidebar-overlay')?.classList.add('hidden');
+                document.getElementById('sidebar-menu')?.classList.add('-translate-x-full');
+            },
+            toggleSubMenu(event) {
+                const parentLi = event.target.closest('li');
+                const subMenu = parentLi?.querySelector('ul');
+                const arrow = parentLi?.querySelector('i.fa-chevron-right');
+                if (subMenu) {
+                    subMenu.classList.toggle('hidden');
+                    arrow?.classList.toggle('rotate-90');
+                }
+            },
+            renderSearchModal() {
+                document.getElementById('search-modal-container').innerHTML = this.templates.searchModal();
+            },
+            openSearchModal() {
+                const modal = document.getElementById('search-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.querySelector('input[name="query"]')?.focus();
+                }
+            },
+            closeSearchModal() {
+                document.getElementById('search-modal')?.classList.add('hidden');
+            },
 
-            if (!secretKey) {
-                codeDisplay.textContent = '------';
-                timeDisplay.textContent = '剩余时间: N/A';
-                statusDisplay.textContent = '请输入密钥';
-                statusDisplay.classList.add('text-red-500');
-                progressDisplay.style.width = '100%';
-                return;
-            }
-
-            try {
-                this.state.totp = new otpauth.TOTP({ secret: secretKey, period: 30 });
-                const update = () => {
-                    const token = this.state.totp.generate();
-                    const remainingTime = 30 - (Math.floor(Date.now() / 1000) % 30);
-                    const progress = (remainingTime / 30) * 100;
-                    
-                    codeDisplay.textContent = token;
-                    timeDisplay.textContent = `剩余时间: ${remainingTime} 秒`;
-                    progressDisplay.style.width = `${progress}%`;
-                    
-                    if (remainingTime <= 1) {
-                        statusDisplay.textContent = '已超时, 需要重新点击获取!';
-                        statusDisplay.classList.add('text-red-500');
-                    } else {
-                        statusDisplay.textContent = '已实时刷新';
-                        statusDisplay.classList.remove('text-red-500');
-                    }
-                };
-                update();
-                this.state.totpInterval = setInterval(update, 1000);
-            } catch (error) {
-                codeDisplay.textContent = '密钥无效';
-                timeDisplay.textContent = '请输入有效的Base32密钥';
-                progressDisplay.style.width = '0%';
-            }
-        };
-
-        App.generateAndShow2FAQRCode = function() {
-            const secretKey = document.getElementById('2fa-key-input')?.value.trim();
-            if (!secretKey) {
-                alert('请输入密钥以生成二维码。');
-                return;
-            }
-            const issuer = "在线工具";
-            const user = "MyToken";
-            const uri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(user)}?secret=${secretKey}&issuer=${encodeURIComponent(issuer)}`;
+            initSwiper() { if (document.querySelector('.swiper') && this.state.carouselData && this.state.carouselData.slides && this.state.carouselData.slides.length > 0) { new Swiper('.swiper', { loop: true, autoplay: { delay: 5000, disableOnInteraction: false }, pagination: { el: '.swiper-pagination', clickable: true }, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, }); } },
+            initStickySidebar() { const sidebarElement = document.querySelector('#desktop-sidebar-wrapper'); if (sidebarElement) { if (this.state.desktopSidebar) { this.state.desktopSidebar.destroy(); } this.state.desktopSidebar = new StickySidebar('#desktop-sidebar-wrapper', { topSpacing: 80, bottomSpacing: 20, containerSelector: '.main-container', innerWrapperSelector: '.sidebar-inner-wrapper' }); } },
+            async router() {
+                const appContainer = document.getElementById('app');
+                // Changed default route to '/tools' for this page
+                const path = window.location.hash.slice(1) || '/tools';
+                const parts = path.split('/');
+                await Promise.all([ this.fetchNavIfNeeded(), this.fetchTagsIfNeeded(), this.fetchFriendlyLinksIfNeeded(), this.fetchRecentCommentsIfNeeded(), this.fetchSiteStatsIfNeeded(), this.fetchCarouselDataIfNeeded(), this.fetchSiteSettingsIfNeeded() ]);
+                await this.fetchDataIfNeeded();
+                
+                if (path === '/') {
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(this.state.posts));
+                    this.initSwiper();
+                } else if (path === '/tools') { // Added route for the tools page
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.toolsPage());
+                } else if (parts[1] === 'post' && parts[2]) {
+                    const slug = parts[2];
+                    const post = await this.fetchSinglePost(slug);
+                    await this.fetchCommentsForPost(slug);
+                    if (post) { const postIndex = this.state.posts.findIndex(p => p.slug === slug); if (postIndex > -1) this.state.posts[postIndex] = post; else this.state.posts.unshift(post); }
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.postPage(post));
+                } else if (['search', 'category', 'tag'].includes(parts[1])) {
+                    let results = [];
+                    let title = "文章列表";
+                    if(parts[1] === 'search' && parts[2]) { const query = decodeURIComponent(parts[2]); results = await this.fetchSearchResults(query); title = `搜索结果: "${query}"`;
+                    } else if (parts[1] === 'category') { const categoryName = parts.slice(2).map(decodeURIComponent).join('/'); results = this.state.posts.filter(p => p.category && p.category.startsWith(categoryName)); title = `分类: ${categoryName}`;
+                    } else if (parts[1] === 'tag' && parts[2]) { const tagName = decodeURIComponent(parts[2]); results = this.state.posts.filter(p => p.tags && p.tags.includes(tagName)); title = `标签: ${tagName}`; }
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.homePage(results, title));
+                    this.initSwiper();
+                } else {
+                    appContainer.innerHTML = this.templates.mainLayout(this.templates.notFoundPage());
+                }
+                document.title = this.state.siteSettings?.blogName ? `${this.state.siteSettings.blogName} - 工具箱` : '我的工具箱';
+                this.initStickySidebar();
+                this.renderMobileSidebar();
+            },
+            handleSearchSubmit(event) {
+                event.preventDefault();
+                const query = event.target.querySelector('[name="query"]').value.trim();
+                if (query) {
+                    window.location.hash = `#/search/${encodeURIComponent(query)}`;
+                }
+                this.closeSearchModal();
+            },
+            async handleCommentSubmit(event, slug) { event.preventDefault(); const { nickname, content } = event.target; if (!nickname.value.trim() || !content.value.trim()) { alert('昵称和内容不能为空!'); return; } try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: nickname.value, content: content.value }) }); if (res.ok) { event.target.reset(); this.state.recentComments = []; this.state.siteStats = null; await this.fetchCommentsForPost(slug); this.router(); } else throw new Error('评论失败'); } catch (e) { alert('评论提交失败'); } },
+            async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: '#/' }, { label: '工具', url: 'tools.html' }]; } },
+            async fetchDataIfNeeded(forceRefresh = false) { if (this.state.posts.length === 0 || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/posts`); const posts = await res.json(); this.state.posts = posts; const categories = {}; posts.forEach(p => { const catParts = p.category.split('/'); catParts.forEach((part, i) => { const catPath = catParts.slice(0, i + 1).join('/'); categories[catPath] = (categories[catPath] || 0) + 1; }); }); this.state.categories = categories; this.state.recentPosts = posts.slice(0, 5); } catch (e) {} },
+            async fetchTagsIfNeeded() { if (this.state.tags.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/tags`); this.state.tags = await res.json(); } catch (e) {} },
+            async fetchFriendlyLinksIfNeeded() { if (this.state.friendlyLinks.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/links`); this.state.friendlyLinks = await res.json(); } catch (e) {} },
+            async fetchRecentCommentsIfNeeded(forceRefresh = false) { if (this.state.recentComments.length === 0 || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/comments/recent`); this.state.recentComments = await res.json(); } catch (e) {} },
+            async fetchCommentsForPost(slug) { try { const res = await fetch(`${this.config.workerUrl}/api/comments/${slug}`); this.state.comments[slug] = await res.json(); } catch (e) { this.state.comments[slug] = []; } },
+            async fetchSinglePost(slug) { try { const response = await fetch(`${this.config.workerUrl}/api/posts/${slug}`); if (!response.ok) throw new Error('Post not found'); return await response.json(); } catch (error) { return null; } },
+            async fetchSiteStatsIfNeeded(forceRefresh = false) { if (!this.state.siteStats || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/stats`); this.state.siteStats = await res.json(); } catch (e) {} },
+            async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} },
+            async fetchSearchResults(query) { try { const res = await fetch(`${this.config.workerUrl}/api/search?q=${encodeURIComponent(query)}`); return await res.json(); } catch (e) { return []; } },
+            async fetchCarouselDataIfNeeded() { if (!this.state.carouselData) try { const res = await fetch(`${this.config.workerUrl}/api/carousel`); this.state.carouselData = await res.json(); } catch (e) {} },
+            handleScroll() { const btn = document.getElementById('back-to-top'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; },
             
-            const canvas = document.getElementById('qr-modal-canvas');
-            if(canvas) {
-                QRCode.toCanvas(canvas, uri, { width: 256, margin: 2 }, (error) => {
-                    if (error) { alert('二维码生成失败!'); console.error(error); } 
-                    else { this.openQrCodeModal(); }
-                });
+            templates: {
+                header: () => {
+                    const renderMenuItems = (items) => {
+                        return `<ul class="list-none">${items.map(item => {
+                            const hasChildren = item.children && item.children.length > 0;
+                            return `<li class="relative group"><a href="${item.url}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
+                        }).join('')}</ul>`;
+                    };
+                    const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
+                        const hasChildren = item.children && item.children.length > 0;
+                        return `<div class="relative group"><a href="${item.url}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
+                    }).join('')}</nav>`;
+                    
+                    const settings = App.state.siteSettings;
+                    const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
+                    const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[40px] w-auto">` : '';
+                    const blogName = settings?.blogName || '';
+                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
+
+                    return `<header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                            <div class="flex justify-between items-center h-[50px] md:h-[62px]">
+                                <div class="hidden md:flex flex-1 items-center gap-4">
+                                    <a href="#" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>
+                                    ${renderTopLevelMenu(App.state.navItems)}
+                                </div>
+                                <div class="hidden md:flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
+                                    <button onclick="App.openSearchModal()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
+                                    <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                                    <a href="admin.html" class="text-sm hover:underline">登录</a>
+                                </div>
+                                <div class="md:hidden flex flex-1 w-full justify-between items-center">
+                                    <div class="flex-1 text-left">
+                                        <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-base font-medium"></i></button>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <a href="#" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                         <button onclick="App.openSearchModal()" class="p-2 -mr-2"><i class="fas fa-search text-base font-medium"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>`;
+                },
+
+                mobileSidebar: () => {
+                    const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
+                    const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
+                    return `
+                        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" onclick="App.closeSidebar()"></div>
+                        <nav id="sidebar-menu" class="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+                            <div class="flex justify-between items-center p-4 border-b dark:border-gray-700">
+                                <h2 class="font-bold text-lg">菜单</h2>
+                                <button onclick="App.closeSidebar()" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            <div class="flex-grow p-2 space-y-1 overflow-y-auto">
+                                ${navItemsHtml}
+                            </div>
+                            <div class="p-2 border-t dark:border-gray-700 space-y-1">
+                                <button onclick="App.toggleTheme()" class="w-full flex items-center gap-3 p-3 rounded-md text-left hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                                <a href="admin.html" class="w-full flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-user-circle fa-fw"></i> <span>登录</span></a>
+                            </div>
+                        </nav>
+                    `;
+                },
+                mobileSidebarMenuItems: (items) => {
+                    return `<ul class="space-y-1">${items.map(item => {
+                        const hasChildren = item.children && item.children.length > 0;
+                        return `
+                            <li>
+                                <div class="flex justify-between items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    <a href="${hasChildren ? 'javascript:void(0)' : item.url}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
+                                        ${App.helpers.renderIcon(item.icon)}
+                                        <span>${item.label}</span>
+                                    </a>
+                                    ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
+                                </div>
+                                ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.mobileSidebarMenuItems(item.children)}</ul>` : ''}
+                            </li>
+                        `;
+                    }).join('')}</ul>`;
+                },
+                searchModal: () => `
+                    <div id="search-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4" onclick="App.closeSearchModal()">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative" onclick="event.stopPropagation()">
+                            <button onclick="App.closeSearchModal()" class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                            <h3 class="text-lg font-semibold mb-4">搜索文章</h3>
+                            <form onsubmit="App.handleSearchSubmit(event)">
+                                <div class="relative">
+                                    <input type="search" name="query" placeholder="请输入关键词..." class="w-full pl-5 pr-12 py-3 border-2 dark:border-gray-600 rounded-lg dark:bg-gray-700 focus:outline-none focus:border-gray-500" autofocus>
+                                    <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">
+                                        <i class="fal fa-search"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                // Modified mainLayout to not show the blog sidebar on the tools page
+                mainLayout: (content, pageType = 'default') => {
+                    const showDesktopSidebar = window.location.hash.slice(1) !== '/tools';
+                    const mainContentClass = showDesktopSidebar ? 'w-full lg:w-3/4' : 'w-full';
+                    const desktopSidebarHtml = showDesktopSidebar ? `<div class="w-full lg:w-1/4 hidden lg:block main-sidebar">${App.templates.desktopSidebar()}</div>` : '';
+                    
+                    return `<div class="flex-grow">
+                              ${App.templates.header()}
+                              <main class="max-w-7xl mx-auto w-full p-4 sm:px-6">
+                                <div class="lg:flex gap-[23px] main-container">
+                                  <div class="${mainContentClass}">${content}</div>
+                                  ${desktopSidebarHtml}
+                                </div>
+                              </main>
+                              ${App.templates.friendlyLinksSection()}
+                            </div>
+                            ${App.templates.footer()}`;
+                },
+                
+                desktopSidebar: () => {
+                    const modulesConfig = App.state.siteSettings?.sidebarModules;
+                    if (!modulesConfig) return '';
+                    const modulesHtml = modulesConfig
+                        .filter(module => module.enabled)
+                        .map(module => App.templates.sidebarModules[module.id] ? App.templates.sidebarModules[module.id]() : '')
+                        .join('');
+                    return `<aside id="desktop-sidebar-wrapper"><div class="sidebar-inner-wrapper space-y-2">${modulesHtml}</div></aside>`;
+                },
+
+                sidebarModules: {
+                    search: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><form onsubmit="App.handleSearchSubmit(event)" class="relative"><input type="search" id="sidebar-search-input" name="query" placeholder="搜索..." class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"><button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fal fa-search"></i></button></form></div>`,
+                    stats: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">网站统计</h3><div class="text-sm space-y-2"><p class="flex justify-between"><span>文章总数:</span><span class="font-mono">${App.state.siteStats?.posts_total||0}</span></p><p class="flex justify-between"><span>分类总数:</span><span class="font-mono">${App.state.siteStats?.categories_total||0}</span></p><p class="flex justify-between"><span>评论总数:</span><span class="font-mono">${App.state.siteStats?.comments_total||0}</span></p></div></div>`,
+                    recentPosts: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">近期文章</h3><ul class="space-y-4">${App.state.recentPosts.map(post=>`<li><a href="#/post/${post.slug}" class="flex items-center gap-3 group"><img src="${post.imageUrl||'https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img'}" alt="${post.title}" class="w-20 h-14 object-cover rounded-md flex-shrink-0" onerror="this.onerror=null;this.src='https://placehold.co/100x75/e2e8f0/cbd5e0?text=Img';"><div class="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-snug">${post.isPinned?'<span class="text-red-500 font-bold">[置顶]</span> ':''}${post.title}</div><p class="text-xs text-gray-400 mt-1">${new Date(post.date).toLocaleDateString()}</p></a></li>`).join('')}</ul></div>`,
+                    categories: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">分类目录</h3><ul class="space-y-3">${Object.entries(App.state.categories).map(([category,count])=>`<li><a href="#/category/${encodeURIComponent(category)}" class="hover:text-blue-600 dark:hover:text-blue-400 text-sm flex justify-between"><span>${category}</span><span>(${count})</span></a></li>`).join('')}</ul></div>`,
+                    tags: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">标签</h3><div class="flex flex-wrap gap-2">${App.state.tags.map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-800 text-sm px-3 py-1 rounded-md border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-gray-300">${tag}</a>`).join('')}</div></div>`,
+                    recentComments: () => `<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><h3 class="font-semibold text-lg mb-4">最近评论</h3><ul class="space-y-4">${(App.state.recentComments||[]).map(comment=>`<li><div class="text-sm"><span class="font-semibold">${comment.nickname}</span> <span class="text-gray-400">在</span> <a href="#/post/${comment.slug}" class="text-blue-500 hover:underline">${comment.postTitle}</a> <span class="text-gray-400">中说:</span></div><div class="text-sm mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-md">${App.helpers.stripHtmlAndTruncate(comment.content,50)}</div></li>`).join('')}</ul></div>`,
+                },
+
+                footer: () => {
+                    const stats = App.state.siteStats || {};
+                    const contactsHtml = (stats.custom_contacts || []).map(contact => 
+                        `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
+                    ).join('');
+
+                    return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                            <div class="py-8">
+                                <div class="flex flex-col items-center md:items-start space-y-[3px]">
+                                    <div class="hidden md:flex items-center">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span>
+                                        <div class="flex items-center ml-2 space-x-[10px]">${contactsHtml}</div>
+                                    </div>
+                                    <div class="hidden md:flex items-center">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span>
+                                        <div class="flex items-center ml-2 space-x-[5px]">
+                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span>
+                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span>
+                                            <span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="text-center md:text-left">
+                                        <span>Copyright © ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>`;
+                },
+                friendlyLinksSection: () => { if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return ''; return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6"><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8"><h3 class="font-semibold text-lg mb-4">友情链接</h3><div class="text-sm text-gray-600 dark:text-gray-400">${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}</div></div></div>`; },
+                carousel: () => { const data = App.state.carouselData; if (!data || !data.slides || data.slides.length === 0) return ''; const slidesHtml = data.slides.map(slide => { const slideContent = `<img src="${slide.imageUrl}" class="w-full h-full object-cover">`; const linkWrapper = slide.linkUrl && slide.linkUrl !== '#' ? `<a href="${slide.linkUrl}" target="_blank" class="block w-full h-full">${slideContent}</a>` : slideContent; return `<div class="swiper-slide">${linkWrapper}</div>`; }).join(''); return `<div class="swiper w-full rounded-lg shadow-lg aspect-[4/1] md:aspect-auto md:h-[230px]"><div class="swiper-wrapper">${slidesHtml}</div><div class="swiper-pagination"></div><div class="swiper-button-prev"></div><div class="swiper-button-next"></div></div>`; },
+                homePage: (posts, title = "最新文章") => `${App.templates.carousel()}<div class="mt-[18px]"><h1 class="text-lg md:text-[1.3rem] font-bold mb-2">${title}</h1><div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="divide-y divide-gray-200 dark:divide-gray-700">${posts.length > 0 ? posts.map(post => App.templates.postCard(post)).join('') : '<p class="p-6">没有找到相关文章。</p>'}</div></div></div>`,
+                postCard: (post) => `<div class="p-6 flex flex-row items-center">
+                    <div class="relative w-1/3 flex-shrink-0 overflow-hidden rounded-md aspect-[16/9]">
+                        <a href="#/post/${post.slug}" class="block h-full w-full group">
+                            <img src="${post.imageUrl || 'https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image'}" alt="${post.title}" class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e2e8f0/cbd5e0?text=Image';">
+                        </a>
+                        <a href="#/category/${encodeURIComponent(post.category)}" class="hidden md:block absolute top-3 left-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-opacity-70">${post.category}</a>
+                    </div>
+                    <div class="pl-5 flex-grow flex flex-col justify-between self-stretch">
+                        <div>
+                            <h2 class="text-base md:text-lg font-bold mb-2"><a href="#/post/${post.slug}" class="hover:text-blue-600 dark:hover:text-blue-400">${post.isPinned ? '<span class="text-red-500 font-bold">[置顶]</span> ' : ''}${post.title}</a></h2>
+                            <div class="hidden md:block text-gray-600 dark:text-gray-400 leading-relaxed text-sm mb-4">${App.helpers.stripHtmlAndTruncate(post.content, 100)}</div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-auto">
+                            <span>${new Date(post.date).toLocaleDateString()}</span>
+                            <div class="flex items-center gap-1"><i class="fas fa-eye"></i><span>${post.views || 0}</span></div>
+                        </div>
+                    </div>
+                </div>`,
+                postPage: (post) => { if (!post) return App.templates.notFoundPage(); const postIndex = App.state.posts.findIndex(p => p.slug === post.slug); const prevPost = App.state.posts[postIndex + 1]; const nextPost = App.state.posts[postIndex - 1]; const postNavigationHtml = `<div class="mt-8 flex justify-between gap-2 sm:gap-4 text-white">${prevPost?`<a href="#/post/${prevPost.slug}" class="relative w-1/2 h-20 rounded-lg overflow-hidden block group"><img src="${prevPost.imageUrl||'https://placehold.co/400x96/7f9cf5/ffffff?text=Prev'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${prevPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Prev';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center"><span class="text-xs font-light"><< 上一篇</span><span class="font-semibold mt-1 text-sm truncate">${prevPost.title}</span></div></a>`:'<div class="w-1/2"></div>'}${nextPost?`<a href="#/post/${nextPost.slug}" class="relative w-1/2 h-20 rounded-lg overflow-hidden block group"><img src="${nextPost.imageUrl||'https://placehold.co/400x96/7f9cf5/ffffff?text=Next'}" class="absolute w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" alt="${nextPost.title}" onerror="this.onerror=null;this.src='https://placehold.co/400x96/7f9cf5/ffffff?text=Next';"><div class="absolute inset-0 bg-black bg-opacity-40 p-3 flex flex-col justify-center text-right"><span class="text-xs font-light">下一篇 >></span><span class="font-semibold mt-1 text-sm truncate">${nextPost.title}</span></div></a>`:'<div class="w-1/2"></div>'}</div>`; return `<article class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><div class="mb-4 text-sm text-gray-500 dark:text-gray-400"><a href="#" class="hover:text-blue-500">首页</a><span class="mx-1 sm:mx-2">></span><a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a><span class="mx-1 sm:mx-2">></span><span>正文</span></div><div class="text-center border-b dark:border-gray-700 pb-5 mb-6"><h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">${post.title}</h1><div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-3 space-x-2 sm:space-x-4"><span>${new Date(post.date).toLocaleDateString().replace(/\//g,'-')}</span><span>分类: <a href="#/category/${encodeURIComponent(post.category)}" class="hover:text-blue-500">${post.category}</a></span><span>阅读(${post.views||0})</span><span>评论(${App.state.comments[post.slug]?.length||0})</span></div></div>${post.imageUrl?`<img src="${post.imageUrl}" alt="${post.title}" class="w-full rounded-lg mb-8">`:''}<div class="content-area">${post.content}</div><div class="mt-8 pt-4 border-t dark:border-gray-700 flex flex-wrap items-center gap-2">${(post.tags&&post.tags.length>0)?'<span class="font-semibold text-sm">标签:</span>':''}${(post.tags||[]).map(tag=>`<a href="#/tag/${encodeURIComponent(tag)}" class="bg-gray-100 dark:bg-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">${tag}</a>`).join('')}</div>${postNavigationHtml}</article>${App.templates.commentsSection(post.slug)}${App.templates.commentForm(post.slug)}`; },
+                commentForm: (slug) => `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">发表评论</h3><form onsubmit="App.handleCommentSubmit(event, '${slug}')"><div class="mb-4"><label for="nickname" class="block text-sm font-medium mb-1">昵称</label><input type="text" id="nickname" name="nickname" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></div><div class="mb-4"><label for="content" class="block text-sm font-medium mb-1">评论内容</label><textarea id="content" name="content" rows="4" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"></textarea></div><div class="text-right"><button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">提交</button></div></form></div>`,
+                commentsSection: (slug) => { const comments = App.state.comments[slug] || []; return `<div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-8"><h3 class="text-xl font-semibold mb-4">评论 (${comments.length})</h3><div class="space-y-6">${comments.length > 0 ? comments.map(c => `<div class="flex items-start gap-4"><div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-lg flex-shrink-0">${c.nickname.charAt(0)}</div><div><div class="flex items-baseline gap-2"><p class="font-semibold">${c.nickname}</p><p class="text-xs text-gray-400">${new Date(c.date).toLocaleString()}</p></div><p class="mt-1">${c.content}</p></div></div>`).join('') : '<p class="text-gray-500 dark:text-gray-400">还没有评论。</p>'}</div></div>`; },
+                notFoundPage: () => `<div class="text-center py-20"><h1 class="text-4xl font-bold">404</h1><p class="mt-4">页面不存在</p><a href="#" class="mt-6 inline-block bg-blue-500 text-white px-6 py-2 rounded">返回首页</a></div>`,
+                // New template for the Tools Page
+                toolsPage: () => `
+                    <div class="flex flex-col md:flex-row gap-6">
+                      <aside class="w-full md:w-1/5 flex-shrink-0">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                          <nav class="flex flex-row flex-wrap justify-center md:flex-col gap-4 text-center text-sm">
+                            <a href="#" class="flex flex-col items-center gap-2 w-20 md:w-auto">
+                              <div class="w-16 h-16 bg-green-500 rounded-lg flex items-center justify-center text-white text-3xl">
+                                <i class="fas fa-shield-check"></i>
+                              </div>
+                              <span>2FA工具</span>
+                            </a>
+                            <a href="#" class="flex flex-col items-center gap-2 text-gray-500 w-20 md:w-auto">
+                              <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-3xl">
+                                <i class="fas fa-qrcode"></i>
+                              </div>
+                              <span>在线生成二维码</span>
+                            </a>
+                            <a href="#" class="flex flex-col items-center gap-2 text-gray-500 w-20 md:w-auto">
+                              <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-3xl">
+                                <i class="fas fa-file-alt"></i>
+                              </div>
+                              <span>文本处理</span>
+                            </a>
+                            <a href="#" class="flex flex-col items-center gap-2 text-gray-500 w-20 md:w-auto">
+                              <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-3xl">
+                                <i class="fas fa-image"></i>
+                              </div>
+                              <span>图片处理</span>
+                            </a>
+                            <a href="#" class="flex flex-col items-center gap-2 text-gray-500 w-20 md:w-auto">
+                              <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-3xl">
+                                <i class="fas fa-ellipsis-h"></i>
+                              </div>
+                              <span>更多工具</span>
+                            </a>
+                          </nav>
+                        </div>
+                      </aside>
+
+                      <main class="w-full">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                          <h1 class="text-2xl font-bold mb-2">2FA验证</h1>
+                          <p class="text-gray-600 dark:text-gray-400 text-sm mb-6">双重验证码/二步验证码在线获取工具（相当于谷歌身份验证器的网页版），使用时任选输入方式输入密钥即可获取。</p>
+
+                          <div class="border-2 border-dashed border-green-400 dark:border-green-600 rounded-lg p-4 text-center text-gray-500 dark:text-gray-400 mb-4 cursor-pointer">
+                            点击此处输入密钥
+                          </div>
+
+                          <button class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg mb-4">
+                            点击获取验证码 <span class="text-xs ml-2">JS实现</span>
+                          </button>
+                          
+                          <p class="mb-4 text-sm">
+                            <span class="font-semibold">双重密钥为:</span>
+                            <span class="font-mono bg-gray-100 dark:bg-gray-700 p-1 rounded text-xs">Q3NZJRWIITWCVN7VTDHSFFCHQROOI3GDL</span>
+                          </p>
+
+                          <p class="text-red-500 font-bold mb-4">当前验证码：已超时，需要重新点击获取按钮！</p>
+                          
+                          <div class="flex justify-between items-center mb-6">
+                            <span class="text-sm">剩余的时间：<span class="font-bold">16 秒</span></span>
+                            <button class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm">生成二维码</button>
+                          </div>
+
+                          <div class="bg-blue-50 dark:bg-gray-900 border border-blue-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                            <h2 class="font-bold text-blue-800 dark:text-blue-300">2FA工具说明</h2>
+                            <p><strong class="font-semibold text-gray-800 dark:text-gray-200">演示密钥:</strong> <span class="font-mono text-xs">7J64V3P3E77J3IKNUGSZ5QANTLKTKVYL</span> (点击此密钥可复制)</p>
+                            <p><strong class="font-semibold text-gray-800 dark:text-gray-200">新手提示:</strong> 必须在预计持续结束前输入/验证码登录或验证，否则会失效显示错误。测试功能时必须输入正确编码的密钥，不要随便输入串字符测试获取功能。目前点击获取验证码的按钮后会自动复制验证码到剪切板，直接去粘贴即可。如果想要验证生成的验证码是否正确，点击生成二维码的按钮，使用谷歌验证器APP扫描添加验证。</p>
+                            <p><strong class="font-semibold text-gray-800 dark:text-gray-200">最近维护:</strong> 2023年10月22日</p>
+                          </div>
+
+                        </div>
+                      </main>
+                    </div>
+                `
             }
         };
         
-        App.openQrCodeModal = function() { document.getElementById('qr-modal')?.classList.remove('hidden'); }
-        App.closeQrCodeModal = function() { document.getElementById('qr-modal')?.classList.add('hidden'); }
-
-        // *** NEW: Function for the standalone QR Code generator tool ***
-        App.generateQRCode = function() {
-            const textInput = document.getElementById('qr-text-input');
-            const canvasContainer = document.getElementById('qr-canvas-container');
-            if (!textInput || !canvasContainer) return;
-            const text = textInput.value.trim();
-            canvasContainer.innerHTML = ''; 
-            if (text === '') { 
-                canvasContainer.innerHTML = '<p class="text-gray-400">请输入内容以生成二维码</p>'; 
-                return; 
-            }
-            const canvasEl = document.createElement('canvas');
-            canvasContainer.appendChild(canvasEl);
-            QRCode.toCanvas(canvasEl, text, { width: 256, margin: 2 }, (error) => {
-                if (error) { 
-                    canvasContainer.innerHTML = '<p class="text-red-500">二维码生成失败，请重试。</p>'; 
-                    console.error(error); 
-                }
-            });
-        };
-
-        Object.assign(App.templates, {
-            mainLayout: (content) => `<div class="flex-grow">${App.templates.header()}<main class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">${content}</main>${App.templates.friendlyLinksSection()}</div>${App.templates.footer()}`,
-            toolsPage: () => `<div class="flex flex-col md:flex-row gap-6">${App.templates.toolSidebar()}<div id="tool-content-wrapper" class="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow p-6 sm:p-8"></div></div>`,
-            
-            toolSidebar: () => `
-                <aside class="w-full md:w-52 flex-shrink-0">
-                    <nav class="tool-sidebar flex flex-row md:flex-col md:space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
-                        <a href="#" onclick="App.setActiveTool('2fa')" data-tool="2fa" class="flex flex-col items-center justify-center text-center p-4 rounded-lg active bg-accent text-white w-24 md:w-full flex-shrink-0 group">
-                            <div class="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-user-shield text-2xl text-accent group-[.active]:text-white"></i></div>
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">2FA工具</span>
-                        </a>
-                        <a href="#" onclick="App.setActiveTool('qrcode')" data-tool="qrcode" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 mb-2 group-[.active]:bg-white/20"><i class="fas fa-qrcode text-2xl text-gray-500 group-[.active]:text-white"></i></div>
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-[.active]:text-white">在线生成二维码</span>
-                        </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-file-alt text-2xl text-gray-400"></i></div>
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">文本处理</span>
-                        </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-image text-2xl text-gray-400"></i></div>
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">图片处理</span>
-                        </a>
-                         <a href="#" class="flex flex-col items-center justify-center text-center p-4 rounded-lg w-24 md:w-full flex-shrink-0 group opacity-50 cursor-not-allowed">
-                             <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 mb-2"><i class="fas fa-ellipsis-h text-2xl text-gray-400"></i></div>
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">更多工具</span>
-                        </a>
-                    </nav>
-                </aside>
-            `,
-
-            tool2FA: () => `
-                <div>
-                    <h1 class="text-2xl font-bold mb-1">2FA验证</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-6">双重验证/二步验证码获取工具 (相当于谷歌身份验证器的网页版)，使用时选择您的方式输入密钥即可。</p>
-                    
-                    <div class="mb-4">
-                        <input id="2fa-key-input" type="text" placeholder="点击此处输入密钥" class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700">
-                    </div>
-                    <button onclick="App.update2FACode()" class="bg-accent text-white font-bold px-5 py-2.5 rounded-md hover:opacity-90 text-sm">点击获取验证码</button>
-                    
-                    <div id="2fa-result-container" class="mt-6 space-y-4 hidden">
-                        <p><strong>双重密钥为:</strong> <span id="2fa-key-display" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">...</span></p>
-                        <p><strong>当前验证码:</strong> <span id="2fa-code" class="text-2xl font-mono font-bold tracking-widest text-accent">------</span> <span id="2fa-status" class="ml-2 font-bold"></span></p>
-                        
-                        <div class="flex items-center justify-between">
-                             <p id="2fa-time" class="text-sm text-gray-500">剩余时间: N/A</p>
-                             <button onclick="App.generateAndShow2FAQRCode()" class="bg-gray-600 text-white font-bold px-4 py-2 rounded-md hover:bg-gray-700 text-xs">生成二维码</button>
-                        </div>
-
-                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                            <div id="2fa-progress" class="bg-accent h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
-                        </div>
-                    </div>
-
-                    <hr class="my-8 dark:border-gray-700">
-                    <div>
-                        <h2 class="text-xl font-bold mb-2">2FA工具说明</h2>
-                        <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                             <p><strong>演示密钥:</strong> 7J64V3P3E77J3IKNUGSZ5QANTLRLTKVL (点击密钥可复制)</p>
-                            <p><strong>帮手提示:</strong> 必须在倒计时结束前输入 验证码登录或验证，否则会失效回显错误。...</p>
-                            <p><strong>更多方式:</strong> 还可以将密钥跑在网址 (https://2fa.run/2fa/) 后面，示例: <a href="https://2fa.run/2fa/7J64V3P3E77J3IKNUGSZ5QANTLRLTKVL" class="text-blue-500 hover:underline" target="_blank">https://2fa.run/2fa/7J64V3P3E77J3IKNUGSZ5QANTLRLTKVL</a>。这样访问也可省去粘贴密钥，这样的方式发给新手使用，最合适不过。</p>
-                             <p><strong>最近维护:</strong> 2023年10月22日</p>
-                        </div>
-                    </div>
-                </div>
-            `,
-            // *** NEW: Template for the standalone QR Code generator tool ***
-            toolQRCode: () => `
-                <div>
-                    <h1 class="text-2xl font-bold mb-1">在线生成二维码(QR码)</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-6">在下方的文本框中输入您想要生成二维码的内容，可以是网址、文字、联系方式等。</p>
-                    <div class="mb-4">
-                        <textarea id="qr-text-input" rows="4" placeholder="请输入内容..." class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:border-accent dark:bg-gray-700" onkeyup="App.generateQRCode()"></textarea>
-                    </div>
-                    <div id="qr-canvas-container" class="mt-6 p-4 border dark:border-gray-600 rounded-md flex items-center justify-center bg-white" style="min-height: 288px;">
-                        <p class="text-gray-400">请输入内容以生成二维码</p>
-                    </div>
-                     <hr class="my-8 dark:border-gray-700">
-                    <div>
-                        <h2 class="text-xl font-bold mb-2">QR码工具说明</h2>
-                        <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                            <p><strong>提示帮助：</strong> QR码（快速响应矩阵码）是一种二维条码，可以被智能手机摄像头快速读取。它常用于存储网址、联系信息、Wi-Fi密码等。</p>
-                            <p><strong>数据说明：</strong> 所有二维码均在您的浏览器本地实时生成，输入的内容不会被发送到任何服务器。您可以右键点击生成的二维码图片进行保存。</p>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            qrCodeModal: () => `
-                <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4" onclick="App.closeQrCodeModal()">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 relative text-center" onclick="event.stopPropagation()">
-                         <h3 class="text-lg font-semibold mb-4">扫描二维码绑定</h3>
-                         <canvas id="qr-modal-canvas"></canvas>
-                         <p class="text-xs text-gray-500 mt-2">请使用 Authenticator App 扫描</p>
-                         <button onclick="App.closeQrCodeModal()" class="mt-4 w-full bg-gray-200 dark:bg-gray-600 py-2 rounded">关闭</button>
-                    </div>
-                </div>
-            `
-        });
-
         App.init();
     </script>
 </body>
