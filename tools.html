@@ -199,6 +199,16 @@
             }
         };
 
+        // NEW: Function to handle the download button click
+        App.handleDownloadQRCode = function() {
+            if (!this.state.qrCodeInstance) {
+                alert("请先生成一个二维码！");
+                return;
+            }
+            const extension = document.getElementById('qr-format').value;
+            this.state.qrCodeInstance.download({ name: "qrcode", extension: extension });
+        };
+
         App.router = async function() {
             if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             this.state.currentTotpObject = null;
@@ -307,9 +317,21 @@
                                     <label for="qr-size" class="block text-xs font-medium mb-1">图像大小 (px):</label>
                                     <input type="number" id="qr-size" value="200" min="20" onkeyup="App.handleGenerateQRCode()" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
                                 </div>
-                                <button onclick="App.handleGenerateQRCode()" class="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600">生成QR码</button>
+                                
+                                <div class="flex gap-2">
+                                    <div class="w-1/2">
+                                        <label for="qr-format" class="block text-xs font-medium mb-1">图片格式:</label>
+                                        <select id="qr-format" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-sm">
+                                            <option value="png" selected>PNG</option>
+                                            <option value="jpeg">JPEG</option>
+                                        </select>
+                                    </div>
+                                    <div class="w-1/2 flex items-end">
+                                        <button onclick="App.handleDownloadQRCode()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-md hover:bg-blue-600">下载</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100 p-1">
+                            <div class="w-48 h-48 flex-shrink-0 border rounded-md flex items-center justify-center bg-gray-100">
                                 <div id="qr-code-output" class="w-full h-full flex items-center justify-center"></div>
                             </div>
                         </div>
