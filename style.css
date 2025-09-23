@@ -142,7 +142,7 @@ img { max-width: 100%; height: auto; display: block; }
     margin-left: 0.25rem;
 }
 
-/* Dropdown Submenu */
+/* Dropdown Submenu -- MODIFIED SECTION */
 .submenu {
     display: none;
     position: absolute;
@@ -157,9 +157,14 @@ img { max-width: 100%; height: auto; display: block; }
     z-index: 60;
     box-shadow: var(--shadow-md);
 }
+
+/* --- START: CSS FIX FOR DROPDOWNS --- */
+/* Show ONLY the direct child submenu when hovering a nav item */
 .nav-item:hover > .submenu {
     display: block;
 }
+/* --- END: CSS FIX --- */
+
 .submenu .nav-item {
     width: 100%;
 }
@@ -176,7 +181,7 @@ img { max-width: 100%; height: auto; display: block; }
     color: var(--text-primary);
 }
 .submenu .submenu { /* Nested submenus */
-    top: -0.5rem;
+    top: -0.6rem; /* Adjusted for better alignment */
     left: 100%;
 }
 .submenu-arrow { font-size: 0.7rem; }
@@ -201,5 +206,3 @@ img { max-width: 100%; height: auto; display: block; }
     .content-column { width: 75%; }
     .sidebar-column { display: block; width: 25%; }
 }
-
-/* Other sections (Admin, etc.) are omitted for brevity but should be kept from the previous version */
