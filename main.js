@@ -1,4 +1,98 @@
-// main.js
+// Header-main.js
+// 依赖 jQuery
+
+// 打开移动端抽屉菜单
+function openMenu() {
+    $("body").css("overflow", "hidden");
+    $(".drawer-menu-plane").addClass("drawer-menu-plane-show");
+    // 将PC端的菜单和用户区移动到抽屉菜单中
+    $(".menu-plane").appendTo($(".drawer-menu-list"));
+    $(".user-menu-plane").appendTo($(".drawer-menu-list"));
+    // 为有子菜单的项添加下拉箭头
+    $(".user-menu-main").not(".user-menu-main-notlogin").append('<div class="m-dropdown" onclick="mobile_menuclick(event,this)"><i class="fal fa-angle-down"></i></div>');
+    $(".phone-tabs").css("display", "none");
+}
+
+// 关闭移动端抽屉菜单
+function closeMenu() {
+    $("body").css("overflow", "auto");
+    $(".drawer-menu-plane").removeClass("drawer-menu-plane-show");
+    // 将菜单和用户区移回PC端位置
+    $(".user-menu-plane").prependTo($(".header-menu"));
+    $(".menu-plane").prependTo($(".header-menu"));
+    $(".m-dropdown").remove(); // 移除移动端的下拉箭头
+    $(".phone-tabs").css("display", "block");
+}
+
+// 打开搜索弹窗
+function openSearch() {
+    $(".dialog-search-plane").addClass("dialog-search-plane-show");
+}
+
+// 关闭搜索弹窗
+function closeSearch() {
+    $(".dialog-search-plane").removeClass("dialog-search-plane-show");
+}
+
+// 移动端菜单项点击事件 (处理子菜单展开)
+function mobile_menuclick(t, e) {
+    // 隐藏所有子菜单
+    $(".user-menu .sub-menu").css("visibility", "hidden");
+    $(".user-menu .sub-menu").css("opacity", "0");
+    
+    // 如果当前点击的子菜单是隐藏的，则显示它
+    if ($(e).parent().find(".sub-menu").css("visibility") == "hidden") {
+        $(e).parent().find(".sub-menu").css("opacity", "1");
+        $(e).parent().find(".sub-menu").css("visibility", "visible");
+    } else if ($(e).parent().parent().find(".user-sub-menu").css("visibility") == "hidden") {
+        $(e).parent().parent().find(".sub-menu").css("opacity", "1");
+        $(e).parent().parent().find(".sub-menu").css("visibility", "visible");
+    }
+
+    // 切换下拉箭头的旋转动画
+    $(".user-menu-main .fa-angle-down").toggleClass("m-dropdown-show-i");
+    t.stopPropagation(); // 阻止事件冒泡
+}
+
+// 在文档加载完成后，为移动端菜单添加下拉箭头和点击事件
+$(document).ready(function() {
+    mobileDeal();
+});
+
+function mobileDeal() {
+    // 为有子菜单的项添加下拉箭头
+    $(".menu-mobile .menu-item-has-children").append('<div class="mobile-m-dropdown"><i class="fal fa-angle-down"></i></div>');
+    $(".menu-mobile .menu-item-has-children>a").css("display", " inline-block");
+
+    // 子菜单点击事件处理
+    $(".menu-mobile .menu-item-has-children").click(function() {
+        let t = $(this).children(".mobile-m-dropdown");
+        t.children().toggleClass("m-dropdown-show-i");
+        $(this).children(".sub-menu").slideToggle();
+        return false;
+    });
+
+    // 菜单链接点击跳转
+    $(".menu-mobile a").click(function() {
+        window.location.href = $(this).attr("href");
+        return false;
+    });
+
+    // 抽屉菜单背景点击时，隐藏所有子菜单
+    $(".drawer-menu-list").click(function(t) {
+        $(".user-menu .sub-menu").css("visibility", "hidden");
+        $(".user-menu .sub-menu").css("opacity", "0");
+        $(".user-menu .sub-menu").removeClass("sub-menu-hide");
+        $(".user-menu .sub-menu").removeClass("sub-menu-show");
+        t.stopPropagation();
+    });
+}
+
+
+
+
+
+// 原main.js
 const App = {
     config: {
         workerUrl: 'https://blog.xy193.workers.dev'
