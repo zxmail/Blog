@@ -253,6 +253,7 @@
             appContainer.innerHTML = this.templates.mainLayout();
             document.title = this.state.tools.find(t => t.id === this.state.activeToolId)?.name + ' - 在线工具' || '在线工具';
             this.initStickySidebar();
+            this.renderMobileSidebar();
             if (this.state.activeToolId === 'qrcode') {
                 this.handleGenerateQRCode();
             }
