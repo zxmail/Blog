@@ -42,7 +42,14 @@ const App = {
         this.renderMobileSidebar();
         const btn = document.getElementById('theme-toggle-button'); 
         if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; 
+        // Call the compatibility fixer if it exists on the current page
+        if (typeof this.applyCompatibilityFixes === 'function') {
+            this.applyCompatibilityFixes();
+        }
     },
+    // Placeholder for page-specific fixes
+    applyCompatibilityFixes: function() {},
+
     renderMobileSidebar() { 
         const container = document.getElementById('sidebar-container');
         if (container) container.innerHTML = this.templates.mobileSidebar();
