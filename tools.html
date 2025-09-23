@@ -138,28 +138,16 @@
 
         App.start2FATimer = function(totp) {
             const update = () => {
-                const remainingTime = totp.period - (Math.floor(Date.now() / 1000) % totp.period);
-
-                if (remainingTime === 0) {
-                    document.getElementById('2fa-code').innerHTML = '<span class="text-sm">已超时，需要重新点击按钮获取！</span>';
-                    document.getElementById('2fa-time').textContent = '0';
-                    clearInterval(this.state.twoFaTimer);
-                    this.state.twoFaTimer = null;
-                    return;
-                }
-                
                 const token = totp.generate();
+                const remainingTime = totp.period - (Math.floor(Date.now() / 1000) % totp.period);
                 document.getElementById('2fa-code').textContent = token;
                 document.getElementById('2fa-time').textContent = remainingTime;
-
-                if ((remainingTime === 30 || !this.state.twoFaTimer) && document.hasFocus()) {
+                if (remainingTime === 30 || !this.state.twoFaTimer) {
                      navigator.clipboard.writeText(token).then(() => {
                         this.showToast("已成功获取验证码哦~", "已成功复制");
                     }).catch(err => { console.error('Failed to copy: ', err); });
                 }
             };
-            
-            if (this.state.twoFaTimer) clearInterval(this.state.twoFaTimer);
             update();
             this.state.twoFaTimer = setInterval(update, 1000); 
         };
