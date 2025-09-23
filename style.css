@@ -12,6 +12,10 @@ body {
 .dark .bg-white {
     background-color: #1f2937 !important; /* dark:bg-gray-800 */
 }
+/* Added more specific rule for header */
+.dark header.bg-white {
+    background-color: #1f2937 !important; /* dark:bg-gray-800 */
+}
 .dark .text-gray-800 {
     color: #e5e7eb !important; /* dark:text-gray-200 */
 }
