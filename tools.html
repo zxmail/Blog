@@ -11,6 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro/dist/pinyin-pro.js"></script>
+
     <link rel="stylesheet" href="style.css">
 
     <script>
@@ -204,7 +206,14 @@
                 case 'un-capitalize': result = text.replace(/\b\w/g, char => char.toLowerCase()); break;
                 case 'sentence-case': result = text.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, c => c.toUpperCase()); break;
                 case 'title-case': result = text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); break;
-                case 'pinyin': this.showToast("功能开发中", "汉字转拼音功能敬请期待。"); return;
+                case 'pinyin':
+                    if (typeof pinyinPro !== 'undefined') {
+                        result = pinyinPro.pinyin(text, { toneType: 'none', type: 'string' });
+                    } else {
+                        this.showToast("错误", "拼音转换库加载失败，请刷新页面重试。");
+                        return;
+                    }
+                    break;
                 case 'copy': navigator.clipboard.writeText(text).then(() => this.showToast("操作成功", "内容已复制到剪贴板。")).catch(() => this.showToast("操作失败", "无法复制内容。")); return;
                 case 'cut': navigator.clipboard.writeText(text).then(() => { textarea.value = ''; this.updateTextToolCharCount(); this.showToast("操作成功", "内容已剪切到剪贴板。"); }).catch(() => this.showToast("操作失败", "无法剪切内容。")); return;
                 case 'clear': textarea.value = ''; break;
