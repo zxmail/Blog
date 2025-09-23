@@ -1,16 +1,99 @@
-/* Global body styling */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+/* style.css */
+html { scroll-behavior: smooth; }
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    background-color: #f5f5f5;
+}
+/* Force dark mode styles for compatibility */
+.dark body { 
+    background-color: #111827 !important;
+    color: #d1d5db !important;
+}
+.dark .bg-white {
+    background-color: #1f2937 !important; /* dark:bg-gray-800 */
+}
+/* Added more specific rule for header */
+.dark header.bg-white {
+    background-color: #1f2937 !important; /* dark:bg-gray-800 */
+}
+.dark .text-gray-800 {
+    color: #e5e7eb !important; /* dark:text-gray-200 */
 }
 
-/* Light Mode styles */
-body {
-    background-color: #f1f5f9; /* slate-100 */
-    color: #0f172a; /* slate-900 */
+/* Layout & Common Components */
+.group .dropdown-menu { display: none; }
+.group:hover > .dropdown-menu { display: block; }
+.dropdown-menu .sub-menu { display: none; }
+.dropdown-menu li:hover > .sub-menu { display: block; }
+.dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
+.sub-menu { top: -0.25rem; left: 100%; }
+#sidebar-menu .rotate-90 { transform: rotate(90deg); }
+#sidebar-menu { font-size: 13px; }
+
+/* Back to Top Button */
+#back-to-top { 
+    position: fixed; 
+    bottom: 20%; 
+    right: 2rem; 
+    display: none; 
+    width: 38px; 
+    height: 38px; 
+    border-radius: 3px; 
+    background-color: rgb(188 188 188); 
+    color: #1e1e1e; 
+    transition: background-color 0.3s ease, color 0.3s ease; 
+}
+#back-to-top:hover { background-color: rgb(123 123 123); color: #fff; }
+#back-to-top i { font-size: 15px; font-weight: 400; }
+
+/* Utility Styles */
+.rounded-lg { border-radius: 0.2rem !important; }
+.rounded-md { border-radius: 0.1rem !important; }
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]), .border-gray-200 { border-color: rgb(245 245 245 / 1) !important; }
+.dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]), .dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
+
+@media (max-width: 639.98px) {
+    body .p-4 { padding: 0.5rem; }
+    body .p-6 { padding: 0.9rem; }
 }
 
-/* Dark Mode styles */
-html.dark body {
-    background-color: #0f172a; /* slate-900 */
-    color: #cbd5e1; /* slate-300 */
+/* --- index.html specific --- */
+.content-area { font-size: 15px; line-height: 1.7; color: #606266; }
+.dark .content-area { color: #d1d5db; }
+.content-area a { color: #3b82f6; text-decoration: underline; }
+.dark .content-area a { color: #60a5fa; }
+
+.swiper-button-next, .swiper-button-prev { color: #ffffff; background-color: rgba(0,0,0,0.25); width: 44px; height: 44px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease, background-color: 0.3s ease; }
+.swiper:hover .swiper-button-next, .swiper:hover .swiper-button-prev { opacity: 1; }
+.swiper-button-next:hover, .swiper-button-prev:hover { background-color: rgba(0,0,0,0.4); }
+.swiper-button-next:after, .swiper-button-prev:after { font-size: 20px; font-weight: bold; }
+.swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); }
+.swiper-pagination-bullet-active { background-color: #ffffff; }
+
+
+/* --- tools.html specific --- */
+.tool-sidebar .tool-item.active .tool-icon-wrapper {
+    background-color: #059669; /* Darker green for active state */
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); /* Add a glow effect */
+    transform: scale(1.1); /* Slightly enlarge the active icon */
+}
+.tool-sidebar .tool-item.active .tool-label {
+    color: #10b981; /* Make the label text green for active state */
+    font-weight: 600; /* Make text bold */
+}
+
+/* NEW: Toast Notification Animation */
+.toast-item {
+    animation: toast-in-right 0.5s, toast-out-right 0.5s 2.5s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes toast-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toast-out-right {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
 }
