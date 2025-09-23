@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sticky-sidebar-v2/dist/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.4/dist/otpauth.umd.min.js"></script>
     
-    <script src="https://pinyin.supfree.net/pinyin.js"></script>
+    <script src="https://www.md5.cn/static/script/pcjs/pinyin.js"></script>
 
     <link rel="stylesheet" href="style.css">
 
@@ -207,8 +207,8 @@
                 case 'sentence-case': result = text.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, c => c.toUpperCase()); break;
                 case 'title-case': result = text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); break;
                 case 'pinyin':
-                    if (typeof pinyinPro !== 'undefined') {
-                        result = pinyinPro.pinyin(text, { toneType: 'none', type: 'string' });
+                    if (typeof pinyin !== 'undefined' && typeof pinyin.getFullChars === 'function') {
+                        result = pinyin.getFullChars(text).toLowerCase().replace(/\s/g, '');
                     } else {
                         this.showToast("错误", "拼音转换库加载失败，请刷新页面重试。");
                         return;
