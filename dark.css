@@ -1,0 +1,33 @@
+/* dark.css - Dark Mode Styles Only */
+.dark body { background-color: #111827; }
+.dark .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(31 41 55 / 1) !important; }
+.dark .dark\:border-gray-600 { --tw-border-opacity: 1; border-color: rgb(75 85 99 / var(--tw-border-opacity)); }
+.dark .dark\:border-gray-700 { border-color: rgb(31 41 55 / 1) !important; }
+.dark .dark\:bg-gray-700 { --tw-bg-opacity: 1; background-color: rgb(55 65 81 / var(--tw-bg-opacity)); }
+.dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(31 41 55 / var(--tw-bg-opacity)); }
+.dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(17 24 39 / var(--tw-bg-opacity)); }
+.dark .dark\:text-gray-100 { --tw-text-opacity: 1; color: rgb(243 244 246 / var(--tw-text-opacity)); }
+.dark .dark\:text-gray-200 { --tw-text-opacity: 1; color: rgb(229 231 235 / var(--tw-text-opacity)); }
+.dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(209 213 219 / var(--tw-text-opacity)); }
+.dark .dark\:text-gray-400 { --tw-text-opacity: 1; color: rgb(156 163 175 / var(--tw-text-opacity)); }
+.dark .group:hover .dark\:group-hover\:text-blue-400 { --tw-text-opacity: 1; color: rgb(96 165 250 / var(--tw-text-opacity)); }
+.dark .hover\:dark\:border-gray-700:hover { --tw-border-opacity: 1; border-color: rgb(55 65 81 / var(--tw-border-opacity)); }
+.dark .hover\:dark\:bg-gray-600:hover { --tw-bg-opacity: 1; background-color: rgb(75 85 99 / var(--tw-bg-opacity)); }
+.dark .hover\:dark\:bg-gray-700:hover { --tw-bg-opacity: 1; background-color: rgb(55 65 81 / var(--tw-bg-opacity)); }
+.dark .hover\:dark\:bg-gray-800:hover { --tw-bg-opacity: 1; background-color: rgb(31 41 55 / var(--tw-bg-opacity)); }
+.dark .hover\:dark\:text-blue-400:hover { --tw-text-opacity: 1; color: rgb(96 165 250 / var(--tw-text-opacity)); }
+.dark .hover\:dark\:text-gray-200:hover { --tw-text-opacity: 1; color: rgb(229 231 235 / var(--tw-text-opacity)); }
+.dark .hover\:dark\:text-white:hover { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+.dark body { background-color: #111827; color: #d1d5db; }
+.dark .bg-white { --tw-bg-opacity: 1; background-color: rgb(31 41 55 / var(--tw-bg-opacity)); }
+.dark .dropdown-menu, .dark .sub-menu { background-color: #1f2937; border-color: #4b5563; }
+.dark .content-area { color: #d1d5db; }
+.dark .content-area a { color: #60a5fa; }
+.dark .text-gray-800 { color: #e5e7eb; }
+.dark .text-gray-900 { color: #f9fafb; }
+.dark .border-gray-200 { border-color: #374151; }
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+/* Add a fallback for the HTML element itself */
+html.dark {
+    background-color: #111827;
+}
