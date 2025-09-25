@@ -1,98 +1,4 @@
-// Header-main.js
-// 依赖 jQuery
-
-// 打开移动端抽屉菜单
-function openMenu() {
-    $("body").css("overflow", "hidden");
-    $(".drawer-menu-plane").addClass("drawer-menu-plane-show");
-    // 将PC端的菜单和用户区移动到抽屉菜单中
-    $(".menu-plane").appendTo($(".drawer-menu-list"));
-    $(".user-menu-plane").appendTo($(".drawer-menu-list"));
-    // 为有子菜单的项添加下拉箭头
-    $(".user-menu-main").not(".user-menu-main-notlogin").append('<div class="m-dropdown" onclick="mobile_menuclick(event,this)"><i class="fal fa-angle-down"></i></div>');
-    $(".phone-tabs").css("display", "none");
-}
-
-// 关闭移动端抽屉菜单
-function closeMenu() {
-    $("body").css("overflow", "auto");
-    $(".drawer-menu-plane").removeClass("drawer-menu-plane-show");
-    // 将菜单和用户区移回PC端位置
-    $(".user-menu-plane").prependTo($(".header-menu"));
-    $(".menu-plane").prependTo($(".header-menu"));
-    $(".m-dropdown").remove(); // 移除移动端的下拉箭头
-    $(".phone-tabs").css("display", "block");
-}
-
-// 打开搜索弹窗
-function openSearch() {
-    $(".dialog-search-plane").addClass("dialog-search-plane-show");
-}
-
-// 关闭搜索弹窗
-function closeSearch() {
-    $(".dialog-search-plane").removeClass("dialog-search-plane-show");
-}
-
-// 移动端菜单项点击事件 (处理子菜单展开)
-function mobile_menuclick(t, e) {
-    // 隐藏所有子菜单
-    $(".user-menu .sub-menu").css("visibility", "hidden");
-    $(".user-menu .sub-menu").css("opacity", "0");
-    
-    // 如果当前点击的子菜单是隐藏的，则显示它
-    if ($(e).parent().find(".sub-menu").css("visibility") == "hidden") {
-        $(e).parent().find(".sub-menu").css("opacity", "1");
-        $(e).parent().find(".sub-menu").css("visibility", "visible");
-    } else if ($(e).parent().parent().find(".user-sub-menu").css("visibility") == "hidden") {
-        $(e).parent().parent().find(".sub-menu").css("opacity", "1");
-        $(e).parent().parent().find(".sub-menu").css("visibility", "visible");
-    }
-
-    // 切换下拉箭头的旋转动画
-    $(".user-menu-main .fa-angle-down").toggleClass("m-dropdown-show-i");
-    t.stopPropagation(); // 阻止事件冒泡
-}
-
-// 在文档加载完成后，为移动端菜单添加下拉箭头和点击事件
-$(document).ready(function() {
-    mobileDeal();
-});
-
-function mobileDeal() {
-    // 为有子菜单的项添加下拉箭头
-    $(".menu-mobile .menu-item-has-children").append('<div class="mobile-m-dropdown"><i class="fal fa-angle-down"></i></div>');
-    $(".menu-mobile .menu-item-has-children>a").css("display", " inline-block");
-
-    // 子菜单点击事件处理
-    $(".menu-mobile .menu-item-has-children").click(function() {
-        let t = $(this).children(".mobile-m-dropdown");
-        t.children().toggleClass("m-dropdown-show-i");
-        $(this).children(".sub-menu").slideToggle();
-        return false;
-    });
-
-    // 菜单链接点击跳转
-    $(".menu-mobile a").click(function() {
-        window.location.href = $(this).attr("href");
-        return false;
-    });
-
-    // 抽屉菜单背景点击时，隐藏所有子菜单
-    $(".drawer-menu-list").click(function(t) {
-        $(".user-menu .sub-menu").css("visibility", "hidden");
-        $(".user-menu .sub-menu").css("opacity", "0");
-        $(".user-menu .sub-menu").removeClass("sub-menu-hide");
-        $(".user-menu .sub-menu").removeClass("sub-menu-show");
-        t.stopPropagation();
-    });
-}
-
-
-
-
-
-// 原main.js
+// main.js
 const App = {
     config: {
         workerUrl: 'https://blog.xy193.workers.dev'
@@ -106,10 +12,11 @@ const App = {
     },
     helpers: {
         renderIcon: (iconString) => {
-            if (!iconString) return '';
+            if (!iconString) return '<i class="fa-fw"></i>';
             if (iconString.trim().startsWith('<svg')) return iconString;
-            return `<i class="${iconString} nav-item-icon"></i>`;
+            return `<i class="${iconString} fa-fw"></i>`;
         },
+        // A helper function to create the correct URL
         createUrl: (path) => {
             const isIndexPage = window.location.pathname.endsWith('/') || window.location.pathname.endsWith('index.html');
             if (path.startsWith('#') && !isIndexPage) {
@@ -123,6 +30,7 @@ const App = {
         console.error("App.init() must be overridden by the specific page script.");
     },
 
+    // --- Core UI & Theme Methods ---
     applyTheme() { 
         if (this.state.theme === 'dark') document.documentElement.classList.add('dark'); 
         else document.documentElement.classList.remove('dark'); 
@@ -133,13 +41,8 @@ const App = {
         this.applyTheme(); 
         this.renderMobileSidebar();
         const btn = document.getElementById('theme-toggle-button'); 
-        if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon"></i>` : `<i class="fal fa-sun"></i>`; 
-        if (typeof this.applyCompatibilityFixes === 'function') {
-            this.applyCompatibilityFixes();
-        }
+        if(btn) btn.innerHTML = this.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`; 
     },
-    applyCompatibilityFixes: function() {},
-
     renderMobileSidebar() { 
         const container = document.getElementById('sidebar-container');
         if (container) container.innerHTML = this.templates.mobileSidebar();
@@ -167,7 +70,10 @@ const App = {
     },
     openSearchModal() {
         const modal = document.getElementById('search-modal');
-        if (modal) modal.classList.remove('hidden');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.querySelector('input[name="query"]')?.focus();
+        }
     },
     closeSearchModal() {
         document.getElementById('search-modal')?.classList.add('hidden');
@@ -179,91 +85,163 @@ const App = {
              else btn.style.display = 'none';
         }
     },
+    // Universal search submission logic
     handleSearchSubmit(event) {
         event.preventDefault();
         const query = event.target.querySelector('[name="query"]').value.trim();
         if (query) {
+            // Directly navigate to the index.html search route
             window.location.href = `index.html#/search/${encodeURIComponent(query)}`;
         }
         this.closeSearchModal();
     },
 
+    // --- Core Data Fetching Methods ---
     async fetchNavIfNeeded() { if (this.state.navItems.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/nav`); this.state.navItems = await res.json(); } catch (e) { this.state.navItems = [{ label: '首页', url: 'index.html' }]; } },
     async fetchFriendlyLinksIfNeeded() { if (this.state.friendlyLinks.length === 0) try { const res = await fetch(`${this.config.workerUrl}/api/links`); this.state.friendlyLinks = await res.json(); } catch (e) {} },
     async fetchSiteStatsIfNeeded(forceRefresh = false) { if (!this.state.siteStats || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/stats`); this.state.siteStats = await res.json(); } catch (e) {} },
     async fetchSiteSettingsIfNeeded(forceRefresh = false) { if (!this.state.siteSettings || forceRefresh) try { const res = await fetch(`${this.config.workerUrl}/api/settings`); this.state.siteSettings = await res.json(); } catch (e) {} },
 
+    // --- Shared Templates ---
     templates: {
         header: () => {
             const renderMenuItems = (items) => {
-                return `<ul class="submenu">${items.map(item => {
+                return `<ul class="list-none">${items.map(item => {
                     const hasChildren = item.children && item.children.length > 0;
+                    // Use helper to create correct URL
                     const finalUrl = App.helpers.createUrl(item.url);
-                    return `<li class="nav-item">
-                        <a href="${finalUrl}">
-                            <span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>
-                            ${hasChildren ? '<i class="fas fa-chevron-right submenu-arrow"></i>' : ''}
-                        </a>
-                        ${hasChildren ? renderMenuItems(item.children) : ''}
-                    </li>`;
+                    return `<li class="relative group"><a href="${finalUrl}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex justify-between items-center"><span>${App.helpers.renderIcon(item.icon)} ${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-right text-xs"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden sub-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-30 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</li>`;
                 }).join('')}</ul>`;
             };
-
-            const topLevelNavHtml = App.state.navItems.map(item => {
+            const renderTopLevelMenu = (items) => `<nav class="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">${items.map(item => {
                 const hasChildren = item.children && item.children.length > 0;
+                // Use helper to create correct URL
                 const finalUrl = App.helpers.createUrl(item.url);
-                return `<li class="nav-item">
-                    <a href="${finalUrl}">
-                        ${App.helpers.renderIcon(item.icon)}
-                        <span>${item.label}</span>
-                        ${hasChildren ? '<i class="fas fa-chevron-down dropdown-arrow"></i>' : ''}
-                    </a>
-                    ${hasChildren ? renderMenuItems(item.children) : ''}
-                </li>`;
-            }).join('');
+                return `<div class="relative group"><a href="${finalUrl}" class="px-3 py-2 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>${hasChildren ? '<i class="fas fa-chevron-down text-xs opacity-70"></i>' : ''}</a>${hasChildren ? `<div class="absolute hidden dropdown-menu bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 z-20 w-full border dark:border-gray-700">${renderMenuItems(item.children)}</div>` : ''}</div>`;
+            }).join('')}</nav>`;
             
             const settings = App.state.siteSettings;
-            const blogName = settings?.blogName || 'My Blog';
-            const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon"></i>` : `<i class="fal fa-sun"></i>`;
+            const logoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[50px] w-auto">` : '';
+            const mobileLogoOrIcon = settings?.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.blogName || ''} Logo" class="h-[40px] w-auto">` : '';
+            const blogName = settings?.blogName || '';
+            const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon h-5 w-5"></i>` : `<i class="fal fa-sun h-5 w-5"></i>`;
 
-            return `<header class="header">
-                <div class="container header-inner">
-                    <div class="header-group-left">
-                        <a href="index.html" class="header-logo">${blogName}</a>
-                        <nav class="header-nav">
-                            <ul>${topLevelNavHtml}</ul>
-                        </nav>
-                    </div>
-                    <div class="header-group-right">
-                        <button class="icon-button" onclick="App.openSearchModal()"><i class="fal fa-search"></i></button>
-                        <button id="theme-toggle-button" class="icon-button" onclick="App.toggleTheme()">${themeIcon}</button>
-                        <a href="admin.html" class="button button-outline">登录</a>
+            return `<header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-[0_0.5px_0.5px_1px_rgba(0,0,0,0.1)]">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                    <div class="flex justify-between items-center h-[50px] md:h-[62px]">
+                        <div class="hidden md:flex flex-1 items-center gap-4">
+                            <a href="index.html" class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">${logoOrIcon}<span class="text-[1.7rem]">${blogName}</span></a>
+                            ${renderTopLevelMenu(App.state.navItems)}
+                        </div>
+                        <div class="hidden md:flex items-center gap-[6px] text-gray-600 dark:text-gray-300">
+                            <button onclick="App.openSearchModal()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-search h-5 w-5"></i></button>
+                            <button id="theme-toggle-button" onclick="App.toggleTheme()" class="p-[0.16rem] rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                            <a href="admin.html" class="text-sm hover:underline">登录</a>
+                        </div>
+                        <div class="md:hidden flex flex-1 w-full justify-between items-center">
+                            <div class="flex-1 text-left">
+                                <button onclick="App.openSidebar()" class="p-2 -ml-2"><i class="fas fa-bars text-base font-medium"></i></button>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="index.html" class="flex items-center gap-2">${mobileLogoOrIcon}<span class="text-lg font-bold">${blogName}</span></a>
+                            </div>
+                            <div class="flex-1 text-right">
+                                 <button onclick="App.openSearchModal()" class="p-2 -mr-2"><i class="fas fa-search text-base font-medium"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>`;
         },
-        // All other templates (mobileSidebar, searchModal, footer, etc.) remain the same
-        // as the previous version.
-        mobileSidebar: () => { /* ... same as before ... */ },
-        searchModal: () => { /* ... same as before ... */ },
+        mobileSidebar: () => {
+            const navItemsHtml = App.templates.mobileSidebarMenuItems(App.state.navItems);
+            const themeIcon = App.state.theme === 'light' ? `<i class="fal fa-moon fa-fw"></i> <span>切换深色模式</span>` : `<i class="fal fa-sun fa-fw"></i> <span>切换浅色模式</span>`;
+            return `
+                <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" onclick="App.closeSidebar()"></div>
+                <nav id="sidebar-menu" class="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+                    <div class="flex justify-between items-center p-4 border-b dark:border-gray-700">
+                        <h2 class="font-bold text-lg">菜单</h2>
+                        <button onclick="App.closeSidebar()" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"><i class="fas fa-times text-xl"></i></button>
+                    </div>
+                    <div class="flex-grow p-2 space-y-1 overflow-y-auto">${navItemsHtml}</div>
+                    <div class="p-2 border-t dark:border-gray-700 space-y-1">
+                        <button onclick="App.toggleTheme()" class="w-full flex items-center gap-3 p-3 rounded-md text-left hover:bg-gray-100 dark:hover:bg-gray-700">${themeIcon}</button>
+                        <a href="admin.html" class="w-full flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fal fa-user-circle fa-fw"></i> <span>登录</span></a>
+                    </div>
+                </nav>`;
+        },
+        mobileSidebarMenuItems: (items) => {
+            return `<ul class="space-y-1">${items.map(item => {
+                const hasChildren = item.children && item.children.length > 0;
+                // Use helper to create correct URL for mobile menu too
+                const finalUrl = App.helpers.createUrl(item.url);
+                return `<li>
+                    <div class="flex justify-between items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        <a href="${hasChildren ? 'javascript:void(0)' : finalUrl}" class="flex-grow flex items-center gap-3 p-3" ${hasChildren ? 'onclick="App.toggleSubMenu(event)"' : 'onclick="App.closeSidebar()"'}>
+                            ${App.helpers.renderIcon(item.icon)}<span>${item.label}</span>
+                        </a>
+                        ${hasChildren ? '<i class="fas fa-chevron-right text-xs p-3 cursor-pointer transition-transform duration-200" onclick="App.toggleSubMenu(event)"></i>' : ''}
+                    </div>
+                    ${hasChildren ? `<ul class="pl-5 mt-1 space-y-1 hidden">${App.templates.mobileSidebarMenuItems(item.children)}</ul>` : ''}
+                </li>`;
+            }).join('')}</ul>`;
+        },
+        searchModal: () => {
+            // The form now calls the universal App.handleSearchSubmit
+            return `
+            <div id="search-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4" onclick="App.closeSearchModal()">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative" onclick="event.stopPropagation()">
+                    <button onclick="App.closeSearchModal()" class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"><i class="fas fa-times text-xl"></i></button>
+                    <h3 class="text-lg font-semibold mb-4">搜索文章</h3>
+                    <form onsubmit="App.handleSearchSubmit(event)">
+                        <div class="relative">
+                            <input type="search" name="query" placeholder="请输入关键词..." class="w-full pl-5 pr-12 py-3 border-2 dark:border-gray-600 rounded-lg dark:bg-gray-700 focus:outline-none focus:border-gray-500" autofocus>
+                            <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md"><i class="fal fa-search"></i></button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        },
         footer: () => {
             const stats = App.state.siteStats || {};
             const contactsHtml = (stats.custom_contacts || []).map(contact =>
-                `<a href="#" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
+                `<a href="#" class="flex items-center gap-x-1.5 hover:text-blue-500" title="${contact.content}"><i class="${contact.icon}"></i><span>${contact.content}</span></a>`
             ).join('');
 
-            return `<footer class="footer"><div class="container footer-inner">
-                <div class="footer-contacts">${contactsHtml}</div>
-                <div class="footer-stats">
-                    <span>文章: ${stats.posts_total||0}</span>
-                    <span>分类: ${stats.categories_total||0}</span>
-                    <span>评论: ${stats.comments_total||0}</span>
+            return `<footer class="mt-auto text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                    <div class="py-8">
+                        <div class="flex flex-col items-center md:items-start space-y-[3px]">
+                            <div class="hidden md:flex items-center">
+                                <span class="font-semibold text-gray-900 dark:text-gray-100">联系方式：</span>
+                                <div class="flex items-center ml-2 space-x-[10px]">${contactsHtml}</div>
+                            </div>
+                            <div class="hidden md:flex items-center">
+                                <span class="font-semibold text-gray-900 dark:text-gray-100">网站统计：</span>
+                                <div class="flex items-center ml-2 space-x-[5px]">
+                                    <span class="flex items-center gap-x-1.5"><i class="fas fa-file-alt w-4 text-center"></i><span>文章总数: ${stats.posts_total||0}</span></span>
+                                    <span class="flex items-center gap-x-1.5"><i class="fas fa-folder w-4 text-center"></i><span>分类总数: ${stats.categories_total||0}</span></span>
+                                    <span class="flex items-center gap-x-1.5"><i class="fas fa-comments w-4 text-center"></i><span>评论总数: ${stats.comments_total||0}</span></span>
+                                </div>
+                            </div>
+                            <div class="text-center md:text-left">
+                                <span>Copyright ? ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}. Powered by Cloudflare Workers & Pages. Theme designed with Tailwind CSS.</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="footer-copyright">
-                    <span>Copyright © ${stats.copyright_year || new Date().getFullYear()} ${stats.copyright_name || 'My Blog'}.</span>
-                </div>
-            </div></footer>`;
+            </footer>`;
         },
-        friendlyLinksSection: () => { /* ... same as before ... */ },
+        friendlyLinksSection: () => {
+            if (!App.state.friendlyLinks || App.state.friendlyLinks.length === 0) return '';
+            return `<div class="max-w-7xl mx-auto w-full p-4 sm:px-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 my-8">
+                            <h3 class="font-semibold text-lg mb-4">友情链接</h3>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                ${(App.state.friendlyLinks||[]).map(link=>`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 mr-4">${link.name}</a>`).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+        },
     }
 };
